@@ -2,6 +2,8 @@
 
 An interactive dashboard for viewing AI intake metrics from Redshift, including volume, cycle time, productivity, and accuracy metrics.
 
+> **This is a template!** Use this dashboard as-is, or create your own custom dashboard from this template. See [Creating Your Own Dashboard](#-creating-your-own-dashboard) below.
+
 ## 🚀 Quick Start for Team Members
 
 **New to this dashboard?** Get started in 5 minutes:
@@ -105,8 +107,51 @@ ai-intake-dashboard/
 ## 📖 Documentation
 
 - **[Team Setup Guide](TEAM_SETUP.md)** - Complete guide for team members (troubleshooting, tips, FAQ)
+- **[Customization Guide](CUSTOMIZATION_GUIDE.md)** - How to create your own dashboard from this template
 - **[Changelog](CHANGELOG.md)** - What's new in each version
 - **[API Documentation](http://localhost:8000/docs)** - Interactive API docs (when running)
+
+---
+
+## 🎨 Creating Your Own Dashboard
+
+Want to build a dashboard for different metrics? Use this repository as a template!
+
+### Step 1: Create from Template
+
+1. Click **"Use this template"** button on GitHub (or visit the repo and click it)
+2. Name your new repository (e.g., `supplier-dashboard`, `orders-dashboard`)
+3. Clone your new repository
+
+```bash
+git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git
+cd YOUR_REPO
+./setup.sh
+```
+
+### Step 2: Customize
+
+See the **[Customization Guide](CUSTOMIZATION_GUIDE.md)** for detailed instructions on:
+- Adding new metrics and SQL queries
+- Creating new chart components
+- Modifying filters
+- Changing the color scheme
+
+### Step 3: Share
+
+Once your dashboard is ready:
+- Push to GitHub for your team to use
+- Add to the Dashboard Hub for central discovery (if your team uses it)
+
+### Quick Customization Checklist
+
+- [ ] Rename dashboard in `README.md` and `backend/app/main.py`
+- [ ] Update/replace routers in `backend/app/routers/`
+- [ ] Update/replace components in `frontend/src/components/`
+- [ ] Update types in `frontend/src/types.ts`
+- [ ] Update hooks in `frontend/src/hooks/useMetrics.ts`
+- [ ] Test with `./start.sh`
+- [ ] Update documentation
 
 ---
 
