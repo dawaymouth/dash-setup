@@ -374,6 +374,7 @@ async def get_field_level_accuracy_trend(
             ROUND(100.0 * SUM(accurate_docs) / NULLIF(SUM(total_docs), 0), 2) as accuracy_pct,
             SUM(total_docs) - SUM(accurate_docs) as docs_with_changes
         FROM field_accuracy_by_date
+        WHERE date < DATE_TRUNC('week', CURRENT_DATE)
         GROUP BY 1
         ORDER BY 1
     """

@@ -71,12 +71,18 @@ async def get_fax_volume(
     
     where_sql = " AND ".join(where_clauses)
     
+    # Add incomplete week filter for weekly aggregation
+    incomplete_week_filter = ""
+    if period == "week":
+        incomplete_week_filter = f"AND {date_trunc}::date < DATE_TRUNC('week', CURRENT_DATE)"
+    
     query = f"""
         SELECT 
             {date_trunc}::date as date,
             COUNT(*) as count
         FROM analytics.intake_documents
         WHERE {where_sql}
+          {incomplete_week_filter}
         GROUP BY 1
         ORDER BY 1
     """
