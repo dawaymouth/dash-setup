@@ -157,7 +157,7 @@ Before sharing with your team, test the complete flow:
 **Option B: Simulate fresh install**
 ```bash
 # In a new directory
-git clone <your-repo-url> test-install
+git clone https://github.com/dawaymouth/dash-setup.git test-install
 cd test-install
 ./setup.sh
 # Follow prompts
@@ -312,7 +312,7 @@ An interactive dashboard showing AI intake metrics:
 - Real-time data from Redshift
 
 ⚡ Quick Start (5 minutes):
-1. Clone: git clone <repository-url>
+1. Clone: git clone https://github.com/dawaymouth/dash-setup.git ai-intake-dashboard
 2. Setup: cd ai-intake-dashboard && ./setup.sh
 3. Start: ./start.sh (after connecting to VPN)
 

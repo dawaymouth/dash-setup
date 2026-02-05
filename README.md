@@ -8,7 +8,7 @@ An interactive dashboard for viewing AI intake metrics from Redshift, including 
 
 ```bash
 # 1. Clone and enter the project
-git clone <repository-url>
+git clone https://github.com/dawaymouth/dash-setup.git ai-intake-dashboard
 cd ai-intake-dashboard
 
 # 2. Run automated setup
