@@ -322,7 +322,10 @@ An interactive dashboard showing AI intake metrics:
 - Quick reference: README.md
 
 🔑 Credentials:
-Use your personal Redshift credentials when prompted during setup.
+During setup, you'll be prompted for:
+- Host/Port/Database (same for everyone - ask a teammate)
+- Username/Password (your personal credentials)
+
 Contact [team-lead] if you don't have Redshift access yet.
 
 💬 Need Help?

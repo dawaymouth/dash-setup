@@ -56,7 +56,11 @@ The setup script will:
 - Validate database connection
 - Set up Git hooks
 
-**Redshift Credentials**: When prompted, use your personal Redshift username and password. Ask your team lead if you don't have Redshift credentials yet.
+**Redshift Credentials**: When prompted during setup:
+- **Host, Port, Database**: Same for everyone (ask team lead or check with a colleague)
+- **Username & Password**: Your personal credentials (unique to you)
+
+Ask your team lead if you don't have Redshift credentials yet.
 
 ### Step 3: Connect to VPN
 
@@ -164,7 +168,8 @@ The update script will:
 
 2. **Verify credentials:**
    - Check `backend/.env` file has correct values
-   - Verify your username and password are correct
+   - Host, port, database should match team's (same for everyone)
+   - Username and password should be YOUR personal credentials
    - Look for typos in hostname, username, or password
 
 3. **Test connection:**

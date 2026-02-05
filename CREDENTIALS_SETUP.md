@@ -4,7 +4,7 @@ This guide is for the **team administrator** who needs to set up database access
 
 ## Overview
 
-**Note:** This team uses **Individual User Accounts** - each team member has their own Redshift credentials.
+**Note:** This team uses **Individual User Accounts** - each team member has their own Redshift username and password. Everyone connects to the same host/port/database, but with their own credentials.
 
 Below are instructions for both approaches for reference:
 

@@ -108,8 +108,7 @@ if [ ! -f ".env" ]; then
     echo -e "${YELLOW}  Redshift Database Configuration${NC}"
     echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
-    echo "Please provide YOUR Redshift connection details:"
-    echo "(Use your personal Redshift credentials)"
+    echo "Connection details (same for everyone on the team):"
     echo ""
     
     read -p "Redshift Host: " REDSHIFT_HOST
@@ -117,7 +116,12 @@ if [ ! -f ".env" ]; then
     REDSHIFT_PORT=${REDSHIFT_PORT:-5439}
     read -p "Redshift Database [dev]: " REDSHIFT_DATABASE
     REDSHIFT_DATABASE=${REDSHIFT_DATABASE:-dev}
-    read -p "Redshift User: " REDSHIFT_USER
+    
+    echo ""
+    echo "YOUR personal credentials:"
+    echo ""
+    
+    read -p "Redshift Username: " REDSHIFT_USER
     read -sp "Redshift Password: " REDSHIFT_PASSWORD
     echo ""
     
