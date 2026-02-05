@@ -273,10 +273,10 @@ Before sharing with your team:
 - [ ] Ensure repository URL is accessible to team
 
 ### Credentials
-- [ ] Create Redshift read-only user (see CREDENTIALS_SETUP.md)
-- [ ] Test credentials work
-- [ ] Add credentials to password manager
-- [ ] Update .env.example with correct hostname/database
+- [ ] Verify all team members have Redshift credentials
+- [ ] Test that team credentials work
+- [ ] Update .env.example with correct hostname/database name
+- [ ] Document where team members can get help if they don't have credentials
 
 ### Documentation
 - [ ] Replace `<repository-url>` in docs with actual URL
@@ -321,8 +321,8 @@ An interactive dashboard showing AI intake metrics:
 - Quick reference: README.md
 
 🔑 Credentials:
-Get Redshift credentials from our password manager:
-"AI Intake Dashboard - Redshift Access"
+Use your personal Redshift credentials when prompted during setup.
+Contact [team-lead] if you don't have Redshift access yet.
 
 💬 Need Help?
 - Check TEAM_SETUP.md for troubleshooting

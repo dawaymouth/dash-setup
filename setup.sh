@@ -108,8 +108,8 @@ if [ ! -f ".env" ]; then
     echo -e "${YELLOW}  Redshift Database Configuration${NC}"
     echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
-    echo "Please provide your Redshift connection details:"
-    echo "(You can get these from your team's password manager)"
+    echo "Please provide YOUR Redshift connection details:"
+    echo "(Use your personal Redshift credentials)"
     echo ""
     
     read -p "Redshift Host: " REDSHIFT_HOST

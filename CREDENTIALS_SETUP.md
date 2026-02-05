@@ -4,12 +4,14 @@ This guide is for the **team administrator** who needs to set up database access
 
 ## Overview
 
-You have two options for managing database credentials:
+**Note:** This team uses **Individual User Accounts** - each team member has their own Redshift credentials.
 
-1. **Shared Read-Only Account** (Recommended) - One service account everyone uses
-2. **Individual User Accounts** - Separate account for each team member
+Below are instructions for both approaches for reference:
 
-## Option 1: Shared Read-Only Account (Recommended)
+1. **Individual User Accounts** (Your current setup) - Separate account for each team member
+2. **Shared Read-Only Account** (Alternative) - One service account everyone uses
+
+## Option 1: Individual User Accounts (Current Setup)
 
 ### Why This Approach?
 
@@ -136,7 +138,7 @@ DROP USER dashboard_readonly;
 
 ---
 
-## Option 2: Individual User Accounts
+## Option 2: Shared Read-Only Account (Alternative)
 
 ### Why This Approach?
 
