@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { FilterState } from '../types';
 import {
   fetchFaxVolume,
+  fetchFaxVolumeTrend,
   fetchPagesStats,
   fetchCategoryDistribution,
   fetchTimeOfDayVolume,
@@ -17,6 +18,7 @@ import {
   fetchPerFieldAccuracy,
   fetchDocumentAccuracy,
   fetchAccuracyTrend,
+  fetchFieldAccuracyTrend,
 } from '../api';
 
 // Volume hooks
@@ -24,6 +26,20 @@ export const useFaxVolume = (filters: FilterState, period: 'day' | 'week' | 'mon
   return useQuery({
     queryKey: ['faxVolume', filters, period],
     queryFn: () => fetchFaxVolume(filters, period),
+  });
+};
+
+export const useFaxVolumeTrend = (
+  filters: { aiIntakeOnly: boolean; supplierId: string | null; supplierOrganizationId: string | null },
+  startDate: Date,
+  endDate: Date,
+  period: 'week' = 'week'
+) => {
+  return useQuery({
+    queryKey: ['faxVolumeTrend', filters, startDate, endDate, period],
+    queryFn: () => fetchFaxVolumeTrend(filters, startDate, endDate, period),
+    retry: 2,
+    staleTime: 5 * 60 * 1000,
   });
 };
 
@@ -133,5 +149,19 @@ export const useAccuracyTrend = (filters: FilterState, period: 'day' | 'week' = 
   return useQuery({
     queryKey: ['accuracyTrend', filters, period],
     queryFn: () => fetchAccuracyTrend(filters, period),
+  });
+};
+
+export const useFieldAccuracyTrend = (
+  filters: { aiIntakeOnly: boolean; supplierId: string | null; supplierOrganizationId: string | null },
+  startDate: Date,
+  endDate: Date,
+  period: 'day' | 'week' = 'day'
+) => {
+  return useQuery({
+    queryKey: ['fieldAccuracyTrend', filters, startDate, endDate, period],
+    queryFn: () => fetchFieldAccuracyTrend(filters, startDate, endDate, period),
+    retry: 2, // Only retry twice instead of default 3
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
   });
 };

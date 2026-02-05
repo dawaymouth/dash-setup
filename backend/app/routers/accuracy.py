@@ -317,6 +317,91 @@ async def get_accuracy_trend(
     )
 
 
+@router.get("/field-level-trend", response_model=AccuracyTrendResponse)
+async def get_field_level_accuracy_trend(
+    start_date: Optional[date] = Query(None, description="Start date (defaults to 90 days ago)"),
+    end_date: Optional[date] = Query(None, description="End date (defaults to today)"),
+    ai_intake_only: bool = Query(False, description="Filter to AI intake enabled suppliers only"),
+    supplier_id: Optional[str] = Query(None, description="Filter by specific supplier"),
+    supplier_organization_id: Optional[str] = Query(None, description="Filter by supplier organization"),
+    period: str = Query("day", description="Aggregation period: day or week"),
+):
+    """
+    Get field-level accuracy trend over time.
+    
+    Calculates the weighted average accuracy across all field types for each time period.
+    This shows the overall field accuracy (like overall_accuracy_pct in /per-field) over time.
+    """
+    
+    # Default date range: last 30 days
+    if not end_date:
+        end_date = date.today()
+    if not start_date:
+        start_date = end_date - timedelta(days=30)
+    
+    # Build supplier filter
+    supplier_filter = ""
+    if ai_intake_only:
+        supplier_filter += " AND sup.ai_intake_enabled = true"
+    if supplier_id:
+        supplier_filter += f" AND sup.external_id = '{supplier_id}'"
+    
+    # Determine date truncation based on period
+    if period == "week":
+        date_trunc = "DATE_TRUNC('week', created_at)"
+    else:
+        date_trunc = "DATE_TRUNC('day', created_at)"
+    
+    base_ctes = build_base_ctes(start_date, end_date, supplier_filter, supplier_organization_id)
+    
+    query = f"""
+        WITH {base_ctes},
+        field_accuracy_by_date AS (
+            SELECT 
+                {date_trunc}::date as date,
+                record_type,
+                field_identifier,
+                COUNT(*) as total_docs,
+                SUM(is_accurate) as accurate_docs
+            FROM comparisons
+            GROUP BY 1, 2, 3
+            HAVING COUNT(*) > 10
+        )
+        SELECT 
+            date,
+            SUM(accurate_docs) as total_accurate,
+            SUM(total_docs) as total_docs,
+            ROUND(100.0 * SUM(accurate_docs) / NULLIF(SUM(total_docs), 0), 2) as accuracy_pct,
+            SUM(total_docs) - SUM(accurate_docs) as docs_with_changes
+        FROM field_accuracy_by_date
+        GROUP BY 1
+        ORDER BY 1
+    """
+    
+    results = execute_query(query)
+    
+    trend_data = [
+        AccuracyTrendPoint(
+            date=row["date"],
+            accuracy_pct=float(row["accuracy_pct"]) if row["accuracy_pct"] else 0,
+            total_docs=row["total_docs"],
+            docs_with_changes=row["docs_with_changes"]
+        )
+        for row in results
+    ]
+    
+    # Calculate overall average
+    total_docs = sum(p.total_docs for p in trend_data)
+    total_changes = sum(p.docs_with_changes for p in trend_data)
+    overall_accuracy = round(100.0 * (total_docs - total_changes) / total_docs, 2) if total_docs > 0 else 0
+    
+    return AccuracyTrendResponse(
+        data=trend_data,
+        overall_accuracy_pct=overall_accuracy,
+        period=period
+    )
+
+
 @router.get("/trend/debug")
 async def debug_trend_data(
     start_date: Optional[date] = Query(None),

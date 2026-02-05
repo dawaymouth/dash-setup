@@ -15,10 +15,22 @@ import type {
   AccuracyTrendResponse,
   FilterState,
 } from './types';
+import { triggerVpnReminder } from './contexts/ErrorContext';
 
 const api = axios.create({
   baseURL: '/api',
 });
+
+// Add response interceptor to catch API errors and show VPN reminder
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Trigger VPN reminder for any API error
+    triggerVpnReminder();
+    // Return rejected promise so React Query can handle the error normally
+    return Promise.reject(error);
+  }
+);
 
 // Helper to format dates for API
 const formatDate = (date: Date) => format(date, 'yyyy-MM-dd');
@@ -48,9 +60,34 @@ export const fetchFaxVolume = async (
   filters: FilterState,
   period: 'day' | 'week' | 'month' = 'day'
 ): Promise<FaxVolumeResponse> => {
-  const { data } = await api.get('/volume/faxes', {
+  const { data} = await api.get('/volume/faxes', {
     params: buildParams(filters, { period }),
   });
+  return data;
+};
+
+export const fetchFaxVolumeTrend = async (
+  filterSubset: { aiIntakeOnly: boolean; supplierId: string | null; supplierOrganizationId: string | null },
+  startDate: Date,
+  endDate: Date,
+  period: 'week' = 'week'
+): Promise<FaxVolumeResponse> => {
+  const params: Record<string, string | boolean> = {
+    start_date: formatDate(startDate),
+    end_date: formatDate(endDate),
+    ai_intake_only: filterSubset.aiIntakeOnly,
+    period,
+  };
+  
+  if (filterSubset.supplierId) {
+    params.supplier_id = filterSubset.supplierId;
+  }
+  
+  if (filterSubset.supplierOrganizationId) {
+    params.supplier_organization_id = filterSubset.supplierOrganizationId;
+  }
+  
+  const { data } = await api.get('/volume/faxes', { params });
   return data;
 };
 
@@ -191,5 +228,30 @@ export const fetchAccuracyTrend = async (
   const { data } = await api.get('/accuracy/trend', {
     params: buildParams(filters, { period }),
   });
+  return data;
+};
+
+export const fetchFieldAccuracyTrend = async (
+  filterSubset: { aiIntakeOnly: boolean; supplierId: string | null; supplierOrganizationId: string | null },
+  startDate: Date,
+  endDate: Date,
+  period: 'day' | 'week' = 'day'
+): Promise<AccuracyTrendResponse> => {
+  const params: Record<string, string | boolean> = {
+    start_date: formatDate(startDate),
+    end_date: formatDate(endDate),
+    ai_intake_only: filterSubset.aiIntakeOnly,
+    period,
+  };
+  
+  if (filterSubset.supplierId) {
+    params.supplier_id = filterSubset.supplierId;
+  }
+  
+  if (filterSubset.supplierOrganizationId) {
+    params.supplier_organization_id = filterSubset.supplierOrganizationId;
+  }
+  
+  const { data } = await api.get('/accuracy/field-level-trend', { params });
   return data;
 };
