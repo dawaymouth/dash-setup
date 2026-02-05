@@ -12,6 +12,9 @@ import type { FilterState } from '../types';
 import {
   useProductivityByIndividual,
 } from '../hooks/useMetrics';
+import { Modal } from './Modal';
+import { InfoButton } from './InfoButton';
+import { ProductivityCalculations } from './calculationDocs';
 
 interface ProductivityMetricsProps {
   filters: FilterState;
@@ -19,6 +22,7 @@ interface ProductivityMetricsProps {
 
 export const ProductivityMetrics: React.FC<ProductivityMetricsProps> = ({ filters }) => {
   const [view, setView] = useState<'total' | 'daily' | 'speed'>('total');
+  const [showInfoModal, setShowInfoModal] = useState(false);
   
   // Fetch once with higher limit for more complete data
   const { data, isLoading } = useProductivityByIndividual(filters, 50);
@@ -60,6 +64,7 @@ export const ProductivityMetrics: React.FC<ProductivityMetricsProps> = ({ filter
         <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-fuchsia-500"></div>
           Productivity
+          <InfoButton onClick={() => setShowInfoModal(true)} />
         </h2>
         <div className="flex gap-2">
           <button
@@ -203,6 +208,15 @@ export const ProductivityMetrics: React.FC<ProductivityMetricsProps> = ({ filter
           </div>
         </>
       )}
+
+      <Modal
+        isOpen={showInfoModal}
+        onClose={() => setShowInfoModal(false)}
+        title="Productivity Calculations"
+        colorClass="border-fuchsia-500"
+      >
+        <ProductivityCalculations />
+      </Modal>
     </div>
   );
 };

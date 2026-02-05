@@ -45,7 +45,7 @@ async def get_productivity_by_individual(
     where_clauses = [
         f"d.document_created_at >= '{start_date}'",
         f"d.document_created_at < '{end_date + timedelta(days=1)}'",
-        "d.state IN ('pushed', 'assigned', 'emailed')",  # Completed states
+        "d.state NOT IN ('new')",  # All processed documents
     ]
     
     if ai_intake_only:
@@ -159,7 +159,7 @@ async def get_daily_average_productivity(
     where_clauses = [
         f"d.document_created_at >= '{start_date}'",
         f"d.document_created_at < '{end_date + timedelta(days=1)}'",
-        "d.state IN ('pushed', 'assigned', 'emailed')",
+        "d.state NOT IN ('new')",  # All processed documents
     ]
     
     if ai_intake_only:

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   BarChart,
   Bar,
@@ -11,12 +11,16 @@ import {
 import { format, parseISO } from 'date-fns';
 import type { FilterState } from '../types';
 import { useReceivedToOpenTime, useProcessingTime } from '../hooks/useMetrics';
+import { Modal } from './Modal';
+import { InfoButton } from './InfoButton';
+import { CycleTimeCalculations } from './calculationDocs';
 
 interface CycleTimeMetricsProps {
   filters: FilterState;
 }
 
 export const CycleTimeMetrics: React.FC<CycleTimeMetricsProps> = ({ filters }) => {
+  const [showInfoModal, setShowInfoModal] = useState(false);
   const { data: receivedToOpenData, isLoading: receivedLoading } = useReceivedToOpenTime(filters);
   const { data: processingData, isLoading: processingLoading } = useProcessingTime(filters);
 
@@ -43,6 +47,7 @@ export const CycleTimeMetrics: React.FC<CycleTimeMetricsProps> = ({ filters }) =
         <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-red-500"></div>
           Cycle Time
+          <InfoButton onClick={() => setShowInfoModal(true)} />
         </h2>
       </div>
 
@@ -135,6 +140,15 @@ export const CycleTimeMetrics: React.FC<CycleTimeMetricsProps> = ({ filters }) =
           </div>
         </>
       )}
+
+      <Modal
+        isOpen={showInfoModal}
+        onClose={() => setShowInfoModal(false)}
+        title="Cycle Time Calculations"
+        colorClass="border-red-500"
+      >
+        <CycleTimeCalculations />
+      </Modal>
     </div>
   );
 };

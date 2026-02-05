@@ -4,3 +4,6 @@ export { CycleTimeMetrics } from './CycleTimeMetrics';
 export { ProductivityMetrics } from './ProductivityMetrics';
 export { AccuracyMetrics } from './AccuracyMetrics';
 export { Dashboard } from './Dashboard';
+export { VpnReminderBanner } from './VpnReminderBanner';
+export { Modal } from './Modal';
+export { InfoButton } from './InfoButton';
