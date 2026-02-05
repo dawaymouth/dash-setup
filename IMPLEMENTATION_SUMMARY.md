@@ -10,7 +10,8 @@ This document summarizes all the changes made to enable easy team sharing of the
    - Checks and installs prerequisites (Homebrew, Python, Node.js)
    - Creates Python virtual environment
    - Installs all dependencies
-   - Prompts for and validates Redshift credentials
+   - Prompts for user's personal Redshift credentials
+   - Validates database connection
    - Sets up Git hooks
    - Provides clear success message and next steps
 
