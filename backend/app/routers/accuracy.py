@@ -59,12 +59,14 @@ def build_base_ctes(start_date: date, end_date: date, supplier_filter: str = "",
                 a.field_identifier, 
                 a.field_value,
                 a.created_at,
+                id.supplier_id,
                 ROW_NUMBER() OVER (
                     PARTITION BY a.csr_inbox_state_id, a.field_identifier 
                     ORDER BY a.created_at ASC
                 ) as rn
             FROM workflow.csr_inbox_state_data_audits a
             JOIN workflow.csr_inbox_states s ON a.csr_inbox_state_id = s.id
+            JOIN analytics.intake_documents id ON s.external_id = id.intake_document_id
             {supplier_join}
             WHERE a.user_id IS NULL
               AND a.created_at >= '{start_date}'
@@ -95,6 +97,7 @@ def build_base_ctes(start_date: date, end_date: date, supplier_filter: str = "",
                 f.field_identifier, 
                 f.csr_inbox_state_id,
                 f.created_at,
+                f.supplier_id,
                 CASE WHEN LOWER(COALESCE(f.field_value, '')) = LOWER(COALESCE(l.field_value, '')) 
                      THEN 1 ELSE 0 END as is_accurate
             FROM first_values f
@@ -142,12 +145,13 @@ async def get_per_field_accuracy(
         SELECT 
             record_type,
             field_identifier,
+            supplier_id,
             COUNT(*) as total_docs,
             SUM(is_accurate) as accurate_docs,
             ROUND(100.0 * SUM(is_accurate) / NULLIF(COUNT(*), 0), 2) as accuracy_pct
         FROM comparisons
-        GROUP BY 1, 2
-        HAVING COUNT(*) > 100
+        GROUP BY 1, 2, 3
+        HAVING COUNT(*) > 10
         ORDER BY accuracy_pct ASC
     """
     
@@ -159,7 +163,8 @@ async def get_per_field_accuracy(
             field_identifier=row["field_identifier"],
             total_docs=row["total_docs"],
             accurate_docs=row["accurate_docs"],
-            accuracy_pct=float(row["accuracy_pct"]) if row["accuracy_pct"] else 0
+            accuracy_pct=float(row["accuracy_pct"]) if row["accuracy_pct"] else 0,
+            supplier_id=row.get("supplier_id")
         )
         for row in results
     ]
@@ -278,19 +283,21 @@ async def get_accuracy_trend(
         doc_accuracy AS (
             SELECT 
                 csr_inbox_state_id,
+                supplier_id,
                 MIN(created_at) as doc_date,
                 MIN(is_accurate) as all_fields_accurate
             FROM comparisons
-            GROUP BY csr_inbox_state_id
+            GROUP BY 1, 2
         )
         SELECT 
             {date_trunc}::date as date,
+            supplier_id,
             COUNT(*) as total_docs,
             SUM(CASE WHEN all_fields_accurate = 0 THEN 1 ELSE 0 END) as docs_with_changes,
             ROUND(100.0 * SUM(all_fields_accurate) / NULLIF(COUNT(*), 0), 2) as accuracy_pct
         FROM doc_accuracy
-        GROUP BY 1
-        ORDER BY 1
+        GROUP BY 1, 2
+        ORDER BY 1, 2
     """
     
     results = execute_query(query)
@@ -300,7 +307,8 @@ async def get_accuracy_trend(
             date=row["date"],
             accuracy_pct=float(row["accuracy_pct"]) if row["accuracy_pct"] else 0,
             total_docs=row["total_docs"],
-            docs_with_changes=row["docs_with_changes"]
+            docs_with_changes=row["docs_with_changes"],
+            supplier_id=row.get("supplier_id")
         )
         for row in results
     ]
@@ -359,24 +367,26 @@ async def get_field_level_accuracy_trend(
         field_accuracy_by_date AS (
             SELECT 
                 {date_trunc}::date as date,
+                supplier_id,
                 record_type,
                 field_identifier,
                 COUNT(*) as total_docs,
                 SUM(is_accurate) as accurate_docs
             FROM comparisons
-            GROUP BY 1, 2, 3
+            GROUP BY 1, 2, 3, 4
             HAVING COUNT(*) > 10
         )
         SELECT 
             date,
+            supplier_id,
             SUM(accurate_docs) as total_accurate,
             SUM(total_docs) as total_docs,
             ROUND(100.0 * SUM(accurate_docs) / NULLIF(SUM(total_docs), 0), 2) as accuracy_pct,
             SUM(total_docs) - SUM(accurate_docs) as docs_with_changes
         FROM field_accuracy_by_date
         WHERE date < DATE_TRUNC('week', CURRENT_DATE)
-        GROUP BY 1
-        ORDER BY 1
+        GROUP BY 1, 2
+        ORDER BY 1, 2
     """
     
     results = execute_query(query)
@@ -386,7 +396,8 @@ async def get_field_level_accuracy_trend(
             date=row["date"],
             accuracy_pct=float(row["accuracy_pct"]) if row["accuracy_pct"] else 0,
             total_docs=row["total_docs"],
-            docs_with_changes=row["docs_with_changes"]
+            docs_with_changes=row["docs_with_changes"],
+            supplier_id=row.get("supplier_id")
         )
         for row in results
     ]

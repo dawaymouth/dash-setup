@@ -11,10 +11,9 @@ export const ProductivityCalculations: React.FC = () => (
         <span className="font-medium">Included states (7 total):</span>
       </p>
       <ul className="list-disc list-inside text-gray-600 text-xs space-y-0.5 ml-2">
-        <li><code className="bg-gray-100 px-1 py-0.5 rounded text-xs">assigned</code> - Document assigned to a user</li>
+        <li><code className="bg-gray-100 px-1 py-0.5 rounded text-xs">assigned</code> - Document assigned to an order (new or existing)</li>
         <li><code className="bg-gray-100 px-1 py-0.5 rounded text-xs">discarded</code> - Document marked as discarded</li>
         <li><code className="bg-gray-100 px-1 py-0.5 rounded text-xs">emailed</code> - Document sent via email</li>
-        <li><code className="bg-gray-100 px-1 py-0.5 rounded text-xs">forwarded</code> - Document forwarded to another system</li>
         <li><code className="bg-gray-100 px-1 py-0.5 rounded text-xs">pushed</code> - Document pushed to destination</li>
         <li><code className="bg-gray-100 px-1 py-0.5 rounded text-xs">split</code> - Document split into multiple documents</li>
         <li><code className="bg-gray-100 px-1 py-0.5 rounded text-xs">splitting</code> - Document currently being split</li>

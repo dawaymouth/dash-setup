@@ -9,6 +9,9 @@ import { ProductivityMetrics } from './ProductivityMetrics';
 import { AccuracyMetrics } from './AccuracyMetrics';
 import { VpnReminderBanner } from './VpnReminderBanner';
 
+// Check if running in static data mode
+const STATIC_MODE = import.meta.env.VITE_STATIC_DATA === 'true';
+
 export const Dashboard: React.FC = () => {
   const [filters, setFilters] = useState<FilterState>({
     startDate: subDays(new Date(), 30),
@@ -19,7 +22,9 @@ export const Dashboard: React.FC = () => {
   });
 
   const { data: suppliersData, isLoading: suppliersLoading } = useSuppliers(
-    filters.aiIntakeOnly
+    filters.aiIntakeOnly,
+    undefined,
+    filters.supplierOrganizationId
   );
   const { data: organizationsData, isLoading: organizationsLoading } = useSupplierOrganizations(
     filters.aiIntakeOnly
@@ -28,32 +33,34 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* VPN Reminder Banner */}
-      <VpnReminderBanner />
+      {/* VPN Reminder Banner - only show in non-static mode */}
+      {!STATIC_MODE && <VpnReminderBanner />}
       
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Intake Dashboard
-              </h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Base Metrics → Business Insights
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm text-gray-500">AI Enabled Suppliers</p>
-                <p className="text-xl font-semibold text-blue-600">
-                  {aiCountData?.ai_enabled_count || '-'}
+      {/* Header - only show in non-static mode */}
+      {!STATIC_MODE && (
+        <header className="bg-white shadow-sm border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Intake Dashboard
+                </h1>
+                <p className="text-sm text-gray-500 mt-1">
+                  Base Metrics → Business Insights
                 </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="text-sm text-gray-500">AI Enabled Suppliers</p>
+                  <p className="text-xl font-semibold text-blue-600">
+                    {aiCountData?.ai_enabled_count || '-'}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* Main Content */}
       <main className="w-full px-4 sm:px-6 lg:px-8 py-6">

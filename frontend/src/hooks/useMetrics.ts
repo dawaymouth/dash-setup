@@ -8,6 +8,7 @@ import {
   fetchTimeOfDayVolume,
   fetchReceivedToOpenTime,
   fetchProcessingTime,
+  fetchStateDistribution,
   fetchProductivityByIndividual,
   fetchDailyAverageProductivity,
   fetchCategoryByIndividual,
@@ -79,6 +80,13 @@ export const useProcessingTime = (filters: FilterState) => {
   });
 };
 
+export const useStateDistribution = (filters: FilterState) => {
+  return useQuery({
+    queryKey: ['stateDistribution', filters],
+    queryFn: () => fetchStateDistribution(filters),
+  });
+};
+
 // Productivity hooks
 export const useProductivityByIndividual = (filters: FilterState, limit = 50) => {
   return useQuery({
@@ -109,10 +117,14 @@ export const useProcessingTimeByIndividual = (filters: FilterState, limit = 50) 
 };
 
 // Supplier hooks
-export const useSuppliers = (aiIntakeOnly = false, search?: string) => {
+export const useSuppliers = (
+  aiIntakeOnly = false,
+  search?: string,
+  supplierOrganizationId?: string | null
+) => {
   return useQuery({
-    queryKey: ['suppliers', aiIntakeOnly, search],
-    queryFn: () => fetchSuppliers(aiIntakeOnly, search),
+    queryKey: ['suppliers', aiIntakeOnly, search, supplierOrganizationId],
+    queryFn: () => fetchSuppliers(aiIntakeOnly, search, supplierOrganizationId),
   });
 };
 

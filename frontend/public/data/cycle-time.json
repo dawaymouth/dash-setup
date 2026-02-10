@@ -1,0 +1,849 @@
+{
+  "received_to_open": {
+    "data": [
+      {
+        "date": "2025-11-07",
+        "avg_minutes": 1833.0,
+        "count": 44
+      },
+      {
+        "date": "2025-11-08",
+        "avg_minutes": 1787.0,
+        "count": 3
+      },
+      {
+        "date": "2025-11-10",
+        "avg_minutes": 871.0,
+        "count": 55
+      },
+      {
+        "date": "2025-11-11",
+        "avg_minutes": 688.0,
+        "count": 46
+      },
+      {
+        "date": "2025-11-12",
+        "avg_minutes": 691.0,
+        "count": 66
+      },
+      {
+        "date": "2025-11-13",
+        "avg_minutes": 465.0,
+        "count": 63
+      },
+      {
+        "date": "2025-11-14",
+        "avg_minutes": 984.0,
+        "count": 30
+      },
+      {
+        "date": "2025-11-15",
+        "avg_minutes": 345.0,
+        "count": 2
+      },
+      {
+        "date": "2025-11-17",
+        "avg_minutes": 187.0,
+        "count": 42
+      },
+      {
+        "date": "2025-11-18",
+        "avg_minutes": 454.0,
+        "count": 35
+      },
+      {
+        "date": "2025-11-19",
+        "avg_minutes": 1881.0,
+        "count": 71
+      },
+      {
+        "date": "2025-11-20",
+        "avg_minutes": 1205.0,
+        "count": 76
+      },
+      {
+        "date": "2025-11-21",
+        "avg_minutes": 1100.0,
+        "count": 46
+      },
+      {
+        "date": "2025-11-22",
+        "avg_minutes": 483.0,
+        "count": 1
+      },
+      {
+        "date": "2025-11-23",
+        "avg_minutes": 508.0,
+        "count": 1
+      },
+      {
+        "date": "2025-11-24",
+        "avg_minutes": 242.0,
+        "count": 48
+      },
+      {
+        "date": "2025-11-25",
+        "avg_minutes": 1951.0,
+        "count": 80
+      },
+      {
+        "date": "2025-11-26",
+        "avg_minutes": 2219.0,
+        "count": 70
+      },
+      {
+        "date": "2025-11-27",
+        "avg_minutes": 1689.0,
+        "count": 3
+      },
+      {
+        "date": "2025-11-28",
+        "avg_minutes": 4469.0,
+        "count": 19
+      },
+      {
+        "date": "2025-11-30",
+        "avg_minutes": 371.0,
+        "count": 1
+      },
+      {
+        "date": "2025-12-01",
+        "avg_minutes": 959.0,
+        "count": 62
+      },
+      {
+        "date": "2025-12-02",
+        "avg_minutes": 1082.0,
+        "count": 84
+      },
+      {
+        "date": "2025-12-03",
+        "avg_minutes": 676.0,
+        "count": 85
+      },
+      {
+        "date": "2025-12-04",
+        "avg_minutes": 749.0,
+        "count": 78
+      },
+      {
+        "date": "2025-12-05",
+        "avg_minutes": 1641.0,
+        "count": 63
+      },
+      {
+        "date": "2025-12-06",
+        "avg_minutes": 391.0,
+        "count": 4
+      },
+      {
+        "date": "2025-12-08",
+        "avg_minutes": 267.0,
+        "count": 58
+      },
+      {
+        "date": "2025-12-09",
+        "avg_minutes": 1117.0,
+        "count": 89
+      },
+      {
+        "date": "2025-12-10",
+        "avg_minutes": 1349.0,
+        "count": 105
+      },
+      {
+        "date": "2025-12-11",
+        "avg_minutes": 883.0,
+        "count": 88
+      },
+      {
+        "date": "2025-12-12",
+        "avg_minutes": 2587.0,
+        "count": 67
+      },
+      {
+        "date": "2025-12-13",
+        "avg_minutes": 645.0,
+        "count": 8
+      },
+      {
+        "date": "2025-12-14",
+        "avg_minutes": 199.0,
+        "count": 1
+      },
+      {
+        "date": "2025-12-15",
+        "avg_minutes": 737.0,
+        "count": 96
+      },
+      {
+        "date": "2025-12-16",
+        "avg_minutes": 680.0,
+        "count": 108
+      },
+      {
+        "date": "2025-12-17",
+        "avg_minutes": 1135.0,
+        "count": 138
+      },
+      {
+        "date": "2025-12-18",
+        "avg_minutes": 2049.0,
+        "count": 76
+      },
+      {
+        "date": "2025-12-19",
+        "avg_minutes": 3713.0,
+        "count": 65
+      },
+      {
+        "date": "2025-12-20",
+        "avg_minutes": 2389.0,
+        "count": 3
+      },
+      {
+        "date": "2025-12-21",
+        "avg_minutes": 3285.0,
+        "count": 2
+      },
+      {
+        "date": "2025-12-22",
+        "avg_minutes": 2418.0,
+        "count": 67
+      },
+      {
+        "date": "2025-12-23",
+        "avg_minutes": 1785.0,
+        "count": 71
+      },
+      {
+        "date": "2025-12-24",
+        "avg_minutes": 821.0,
+        "count": 42
+      },
+      {
+        "date": "2025-12-25",
+        "avg_minutes": 1368.0,
+        "count": 1
+      },
+      {
+        "date": "2025-12-26",
+        "avg_minutes": 1891.0,
+        "count": 40
+      },
+      {
+        "date": "2025-12-27",
+        "avg_minutes": 372.0,
+        "count": 4
+      },
+      {
+        "date": "2025-12-28",
+        "avg_minutes": 476.0,
+        "count": 2
+      },
+      {
+        "date": "2025-12-29",
+        "avg_minutes": 281.0,
+        "count": 118
+      },
+      {
+        "date": "2025-12-30",
+        "avg_minutes": 227.0,
+        "count": 105
+      },
+      {
+        "date": "2025-12-31",
+        "avg_minutes": 899.0,
+        "count": 84
+      },
+      {
+        "date": "2026-01-01",
+        "avg_minutes": 1421.0,
+        "count": 3
+      },
+      {
+        "date": "2026-01-02",
+        "avg_minutes": 2032.0,
+        "count": 60
+      },
+      {
+        "date": "2026-01-03",
+        "avg_minutes": 695.0,
+        "count": 6
+      },
+      {
+        "date": "2026-01-04",
+        "avg_minutes": 449.0,
+        "count": 1
+      },
+      {
+        "date": "2026-01-05",
+        "avg_minutes": 810.0,
+        "count": 67
+      },
+      {
+        "date": "2026-01-06",
+        "avg_minutes": 1120.0,
+        "count": 76
+      },
+      {
+        "date": "2026-01-07",
+        "avg_minutes": 1755.0,
+        "count": 83
+      },
+      {
+        "date": "2026-01-08",
+        "avg_minutes": 1645.0,
+        "count": 103
+      },
+      {
+        "date": "2026-01-09",
+        "avg_minutes": 3021.0,
+        "count": 70
+      },
+      {
+        "date": "2026-01-10",
+        "avg_minutes": 6618.0,
+        "count": 1
+      },
+      {
+        "date": "2026-01-12",
+        "avg_minutes": 1506.0,
+        "count": 62
+      },
+      {
+        "date": "2026-01-13",
+        "avg_minutes": 1552.0,
+        "count": 102
+      },
+      {
+        "date": "2026-01-14",
+        "avg_minutes": 2549.0,
+        "count": 119
+      },
+      {
+        "date": "2026-01-15",
+        "avg_minutes": 1950.0,
+        "count": 93
+      },
+      {
+        "date": "2026-01-16",
+        "avg_minutes": 2346.0,
+        "count": 68
+      },
+      {
+        "date": "2026-01-17",
+        "avg_minutes": 2309.0,
+        "count": 7
+      },
+      {
+        "date": "2026-01-19",
+        "avg_minutes": 3094.0,
+        "count": 73
+      },
+      {
+        "date": "2026-01-20",
+        "avg_minutes": 2473.0,
+        "count": 115
+      },
+      {
+        "date": "2026-01-21",
+        "avg_minutes": 3176.0,
+        "count": 120
+      },
+      {
+        "date": "2026-01-22",
+        "avg_minutes": 2699.0,
+        "count": 129
+      },
+      {
+        "date": "2026-01-23",
+        "avg_minutes": 3434.0,
+        "count": 152
+      },
+      {
+        "date": "2026-01-24",
+        "avg_minutes": 702.0,
+        "count": 4
+      },
+      {
+        "date": "2026-01-25",
+        "avg_minutes": 5115.0,
+        "count": 1
+      },
+      {
+        "date": "2026-01-26",
+        "avg_minutes": 1741.0,
+        "count": 92
+      },
+      {
+        "date": "2026-01-27",
+        "avg_minutes": 2432.0,
+        "count": 124
+      },
+      {
+        "date": "2026-01-28",
+        "avg_minutes": 2298.0,
+        "count": 118
+      },
+      {
+        "date": "2026-01-29",
+        "avg_minutes": 3541.0,
+        "count": 142
+      },
+      {
+        "date": "2026-01-30",
+        "avg_minutes": 4731.0,
+        "count": 130
+      },
+      {
+        "date": "2026-01-31",
+        "avg_minutes": 1820.0,
+        "count": 4
+      },
+      {
+        "date": "2026-02-02",
+        "avg_minutes": 1256.0,
+        "count": 123
+      },
+      {
+        "date": "2026-02-03",
+        "avg_minutes": 930.0,
+        "count": 81
+      },
+      {
+        "date": "2026-02-04",
+        "avg_minutes": 87.0,
+        "count": 9
+      }
+    ],
+    "overall_avg_minutes": 1753.92,
+    "metric_type": "received_to_open"
+  },
+  "processing": {
+    "data": [
+      {
+        "date": "2025-11-07",
+        "avg_minutes": 3.0,
+        "count": 53
+      },
+      {
+        "date": "2025-11-08",
+        "avg_minutes": 2.0,
+        "count": 4
+      },
+      {
+        "date": "2025-11-10",
+        "avg_minutes": 2.5,
+        "count": 64
+      },
+      {
+        "date": "2025-11-11",
+        "avg_minutes": 3.0,
+        "count": 57
+      },
+      {
+        "date": "2025-11-12",
+        "avg_minutes": 2.0,
+        "count": 74
+      },
+      {
+        "date": "2025-11-13",
+        "avg_minutes": 3.0,
+        "count": 75
+      },
+      {
+        "date": "2025-11-14",
+        "avg_minutes": 3.0,
+        "count": 60
+      },
+      {
+        "date": "2025-11-15",
+        "avg_minutes": 1.0,
+        "count": 6
+      },
+      {
+        "date": "2025-11-17",
+        "avg_minutes": 2.0,
+        "count": 74
+      },
+      {
+        "date": "2025-11-18",
+        "avg_minutes": 3.0,
+        "count": 59
+      },
+      {
+        "date": "2025-11-19",
+        "avg_minutes": 4.0,
+        "count": 92
+      },
+      {
+        "date": "2025-11-20",
+        "avg_minutes": 3.0,
+        "count": 79
+      },
+      {
+        "date": "2025-11-21",
+        "avg_minutes": 7.5,
+        "count": 90
+      },
+      {
+        "date": "2025-11-22",
+        "avg_minutes": 1.0,
+        "count": 5
+      },
+      {
+        "date": "2025-11-23",
+        "avg_minutes": 3.0,
+        "count": 3
+      },
+      {
+        "date": "2025-11-24",
+        "avg_minutes": 6.0,
+        "count": 83
+      },
+      {
+        "date": "2025-11-25",
+        "avg_minutes": 5.0,
+        "count": 81
+      },
+      {
+        "date": "2025-11-26",
+        "avg_minutes": 3.0,
+        "count": 83
+      },
+      {
+        "date": "2025-11-27",
+        "avg_minutes": 5.0,
+        "count": 3
+      },
+      {
+        "date": "2025-11-28",
+        "avg_minutes": 2.0,
+        "count": 13
+      },
+      {
+        "date": "2025-11-30",
+        "avg_minutes": 25.0,
+        "count": 1
+      },
+      {
+        "date": "2025-12-01",
+        "avg_minutes": 2.0,
+        "count": 52
+      },
+      {
+        "date": "2025-12-02",
+        "avg_minutes": 6.0,
+        "count": 90
+      },
+      {
+        "date": "2025-12-03",
+        "avg_minutes": 4.0,
+        "count": 88
+      },
+      {
+        "date": "2025-12-04",
+        "avg_minutes": 3.0,
+        "count": 91
+      },
+      {
+        "date": "2025-12-05",
+        "avg_minutes": 6.0,
+        "count": 83
+      },
+      {
+        "date": "2025-12-06",
+        "avg_minutes": 4.0,
+        "count": 7
+      },
+      {
+        "date": "2025-12-08",
+        "avg_minutes": 5.0,
+        "count": 85
+      },
+      {
+        "date": "2025-12-09",
+        "avg_minutes": 7.0,
+        "count": 84
+      },
+      {
+        "date": "2025-12-10",
+        "avg_minutes": 4.0,
+        "count": 101
+      },
+      {
+        "date": "2025-12-11",
+        "avg_minutes": 4.0,
+        "count": 100
+      },
+      {
+        "date": "2025-12-12",
+        "avg_minutes": 3.0,
+        "count": 54
+      },
+      {
+        "date": "2025-12-13",
+        "avg_minutes": 26.0,
+        "count": 7
+      },
+      {
+        "date": "2025-12-14",
+        "avg_minutes": 13.0,
+        "count": 1
+      },
+      {
+        "date": "2025-12-15",
+        "avg_minutes": 5.0,
+        "count": 78
+      },
+      {
+        "date": "2025-12-16",
+        "avg_minutes": 5.0,
+        "count": 92
+      },
+      {
+        "date": "2025-12-17",
+        "avg_minutes": 6.0,
+        "count": 131
+      },
+      {
+        "date": "2025-12-18",
+        "avg_minutes": 6.0,
+        "count": 85
+      },
+      {
+        "date": "2025-12-19",
+        "avg_minutes": 3.0,
+        "count": 74
+      },
+      {
+        "date": "2025-12-20",
+        "avg_minutes": 11.0,
+        "count": 3
+      },
+      {
+        "date": "2025-12-21",
+        "avg_minutes": 4.0,
+        "count": 2
+      },
+      {
+        "date": "2025-12-22",
+        "avg_minutes": 3.0,
+        "count": 78
+      },
+      {
+        "date": "2025-12-23",
+        "avg_minutes": 3.0,
+        "count": 74
+      },
+      {
+        "date": "2025-12-24",
+        "avg_minutes": 2.0,
+        "count": 41
+      },
+      {
+        "date": "2025-12-25",
+        "avg_minutes": 8.0,
+        "count": 1
+      },
+      {
+        "date": "2025-12-26",
+        "avg_minutes": 3.0,
+        "count": 28
+      },
+      {
+        "date": "2025-12-27",
+        "avg_minutes": 102.0,
+        "count": 4
+      },
+      {
+        "date": "2025-12-28",
+        "avg_minutes": 8.5,
+        "count": 2
+      },
+      {
+        "date": "2025-12-29",
+        "avg_minutes": 2.0,
+        "count": 122
+      },
+      {
+        "date": "2025-12-30",
+        "avg_minutes": 3.5,
+        "count": 116
+      },
+      {
+        "date": "2025-12-31",
+        "avg_minutes": 4.0,
+        "count": 84
+      },
+      {
+        "date": "2026-01-01",
+        "avg_minutes": 2.0,
+        "count": 3
+      },
+      {
+        "date": "2026-01-02",
+        "avg_minutes": 4.0,
+        "count": 62
+      },
+      {
+        "date": "2026-01-03",
+        "avg_minutes": 10.5,
+        "count": 6
+      },
+      {
+        "date": "2026-01-04",
+        "avg_minutes": 3.0,
+        "count": 1
+      },
+      {
+        "date": "2026-01-05",
+        "avg_minutes": 5.0,
+        "count": 58
+      },
+      {
+        "date": "2026-01-06",
+        "avg_minutes": 4.0,
+        "count": 67
+      },
+      {
+        "date": "2026-01-07",
+        "avg_minutes": 4.5,
+        "count": 72
+      },
+      {
+        "date": "2026-01-08",
+        "avg_minutes": 9.0,
+        "count": 89
+      },
+      {
+        "date": "2026-01-09",
+        "avg_minutes": 5.0,
+        "count": 75
+      },
+      {
+        "date": "2026-01-10",
+        "avg_minutes": 49.0,
+        "count": 2
+      },
+      {
+        "date": "2026-01-11",
+        "avg_minutes": 1.0,
+        "count": 1
+      },
+      {
+        "date": "2026-01-12",
+        "avg_minutes": 4.0,
+        "count": 84
+      },
+      {
+        "date": "2026-01-13",
+        "avg_minutes": 4.0,
+        "count": 128
+      },
+      {
+        "date": "2026-01-14",
+        "avg_minutes": 5.0,
+        "count": 131
+      },
+      {
+        "date": "2026-01-15",
+        "avg_minutes": 5.5,
+        "count": 116
+      },
+      {
+        "date": "2026-01-16",
+        "avg_minutes": 5.0,
+        "count": 96
+      },
+      {
+        "date": "2026-01-17",
+        "avg_minutes": 13.0,
+        "count": 7
+      },
+      {
+        "date": "2026-01-19",
+        "avg_minutes": 5.0,
+        "count": 67
+      },
+      {
+        "date": "2026-01-20",
+        "avg_minutes": 8.5,
+        "count": 130
+      },
+      {
+        "date": "2026-01-21",
+        "avg_minutes": 6.0,
+        "count": 112
+      },
+      {
+        "date": "2026-01-22",
+        "avg_minutes": 7.5,
+        "count": 148
+      },
+      {
+        "date": "2026-01-23",
+        "avg_minutes": 8.0,
+        "count": 147
+      },
+      {
+        "date": "2026-01-24",
+        "avg_minutes": 5.5,
+        "count": 6
+      },
+      {
+        "date": "2026-01-25",
+        "avg_minutes": 6.0,
+        "count": 1
+      },
+      {
+        "date": "2026-01-26",
+        "avg_minutes": 13.0,
+        "count": 93
+      },
+      {
+        "date": "2026-01-27",
+        "avg_minutes": 8.0,
+        "count": 125
+      },
+      {
+        "date": "2026-01-28",
+        "avg_minutes": 14.0,
+        "count": 123
+      },
+      {
+        "date": "2026-01-29",
+        "avg_minutes": 10.5,
+        "count": 134
+      },
+      {
+        "date": "2026-01-30",
+        "avg_minutes": 13.0,
+        "count": 111
+      },
+      {
+        "date": "2026-01-31",
+        "avg_minutes": 15.0,
+        "count": 4
+      },
+      {
+        "date": "2026-02-02",
+        "avg_minutes": 12.0,
+        "count": 107
+      },
+      {
+        "date": "2026-02-03",
+        "avg_minutes": 15.0,
+        "count": 78
+      },
+      {
+        "date": "2026-02-04",
+        "avg_minutes": 8.0,
+        "count": 11
+      }
+    ],
+    "overall_avg_minutes": 5.0,
+    "metric_type": "processing"
+  }
+}

@@ -20,6 +20,7 @@ class FaxVolumeByDate(BaseModel):
     """Fax volume for a specific date."""
     date: date
     count: int
+    supplier_id: Optional[str] = None  # For client-side filtering by supplier
 
 
 class FaxVolumeResponse(BaseModel):
@@ -34,6 +35,7 @@ class CategoryDistribution(BaseModel):
     category: str
     count: int
     percentage: float
+    supplier_id: Optional[str] = None  # For client-side filtering by supplier
 
 
 class CategoryDistributionResponse(BaseModel):
@@ -52,6 +54,7 @@ class PagesStatsResponse(BaseModel):
 class TimeOfDayDocument(BaseModel):
     """Document timestamp for time-of-day analysis."""
     timestamp: datetime
+    supplier_id: Optional[str] = None  # For client-side filtering by supplier
 
 
 class TimeOfDayVolumeResponse(BaseModel):
@@ -66,6 +69,7 @@ class CycleTimeByDate(BaseModel):
     date: date
     avg_minutes: float
     count: int
+    supplier_id: Optional[str] = None  # For client-side filtering by supplier
 
 
 class CycleTimeResponse(BaseModel):
@@ -73,6 +77,22 @@ class CycleTimeResponse(BaseModel):
     data: list[CycleTimeByDate]
     overall_avg_minutes: float
     metric_type: str  # "received_to_open" or "processing"
+
+
+# Response Models - State Distribution
+class StateDistributionItem(BaseModel):
+    """Document state distribution item."""
+    state: str
+    label: str  # Display label (e.g., "Pushed", "Assigned")
+    count: int
+    percentage: float
+    supplier_id: Optional[str] = None  # For client-side filtering by supplier
+
+
+class StateDistributionResponse(BaseModel):
+    """Response for state distribution endpoint."""
+    data: list[StateDistributionItem]
+    total: int
 
 
 # Response Models - Productivity
@@ -83,6 +103,7 @@ class IndividualProductivity(BaseModel):
     total_processed: int
     avg_per_day: float
     median_minutes: Optional[float] = None
+    supplier_id: Optional[str] = None  # For client-side filtering by supplier
 
 
 class ProductivityResponse(BaseModel):
@@ -99,6 +120,7 @@ class CategoryByIndividual(BaseModel):
     category: str
     count: int
     percentage: float
+    supplier_id: Optional[str] = None  # For client-side filtering by supplier
 
 
 class CategoryByIndividualResponse(BaseModel):
@@ -145,6 +167,7 @@ class FieldAccuracy(BaseModel):
     total_docs: int  # Total documents with system-preselected values for this field
     accurate_docs: int  # Documents where value didn't change
     accuracy_pct: float
+    supplier_id: Optional[str] = None  # For client-side filtering by supplier
 
 
 class PerFieldAccuracyResponse(BaseModel):
@@ -168,6 +191,7 @@ class AccuracyTrendPoint(BaseModel):
     accuracy_pct: float
     total_docs: int  # Total documents for this period
     docs_with_changes: int  # Documents where values changed
+    supplier_id: Optional[str] = None  # For client-side filtering by supplier
 
 
 class AccuracyTrendResponse(BaseModel):

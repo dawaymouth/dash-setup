@@ -41,6 +41,22 @@ The dashboard automatically notifies you when updates are available:
 
 ---
 
+## 🤝 Sharing with External Customers
+
+Share interactive, password-protected dashboards with suppliers and partners:
+
+```bash
+./scripts/build-external.sh  # Interactive tool to export and build
+```
+
+See **[External Sharing Guide](EXTERNAL_SHARING.md)** for complete instructions on:
+- Exporting data for specific supplier organizations
+- Deploying to free hosting (Vercel/Netlify) with password protection
+- Updating data periodically
+- Security best practices
+
+---
+
 ## Features
 
 - **Volume Metrics** (Green)

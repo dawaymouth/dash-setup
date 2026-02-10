@@ -14,6 +14,7 @@ router = APIRouter()
 async def list_suppliers(
     ai_intake_only: bool = Query(False, description="Filter to AI intake enabled suppliers only"),
     search: Optional[str] = Query(None, description="Search suppliers by name"),
+    supplier_organization_id: Optional[str] = Query(None, description="Filter to suppliers in this organization"),
 ):
     """List all suppliers with optional filtering.
     
@@ -25,6 +26,8 @@ async def list_suppliers(
     where_clauses = ["id.supplier_id IS NOT NULL"]
     if search:
         where_clauses.append(f"LOWER(id.supplier) LIKE LOWER('%{search}%')")
+    if supplier_organization_id:
+        where_clauses.append(f"id.supplier_organization_id = '{supplier_organization_id}'")
     
     where_sql = f"WHERE {' AND '.join(where_clauses)}"
     

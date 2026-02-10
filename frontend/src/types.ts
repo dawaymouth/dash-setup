@@ -3,6 +3,7 @@
 export interface FaxVolumeByDate {
   date: string;
   count: number;
+  supplier_id?: string;  // For client-side filtering
 }
 
 export interface FaxVolumeResponse {
@@ -13,6 +14,7 @@ export interface FaxVolumeResponse {
 
 export interface TimeOfDayDocument {
   timestamp: string;  // ISO 8601 UTC timestamp
+  supplier_id?: string;  // For client-side filtering
 }
 
 export interface TimeOfDayVolumeResponse {
@@ -24,6 +26,7 @@ export interface CategoryDistribution {
   category: string;
   count: number;
   percentage: number;
+  supplier_id?: string;  // For client-side filtering
 }
 
 export interface CategoryDistributionResponse {
@@ -41,6 +44,7 @@ export interface CycleTimeByDate {
   date: string;
   avg_minutes: number;
   count: number;
+  supplier_id?: string;  // For client-side filtering
 }
 
 export interface CycleTimeResponse {
@@ -49,12 +53,26 @@ export interface CycleTimeResponse {
   metric_type: 'received_to_open' | 'processing';
 }
 
+export interface StateDistributionItem {
+  state: string;
+  label: string;
+  count: number;
+  percentage: number;
+  supplier_id?: string;  // For client-side filtering
+}
+
+export interface StateDistributionResponse {
+  data: StateDistributionItem[];
+  total: number;
+}
+
 export interface IndividualProductivity {
   user_id: string;
   user_name: string;
   total_processed: number;
   avg_per_day: number;
   median_minutes?: number;
+  supplier_id?: string;  // For client-side filtering
 }
 
 export interface ProductivityResponse {
@@ -69,6 +87,7 @@ export interface CategoryByIndividual {
   category: string;
   count: number;
   percentage: number;
+  supplier_id?: string;  // For client-side filtering
 }
 
 export interface CategoryByIndividualResponse {
@@ -105,6 +124,7 @@ export interface FieldAccuracy {
   total_docs: number;  // Total documents with system-preselected values
   accurate_docs: number;  // Documents where value didn't change
   accuracy_pct: number;
+  supplier_id?: string;  // For client-side filtering
 }
 
 export interface PerFieldAccuracyResponse {
@@ -125,6 +145,7 @@ export interface AccuracyTrendPoint {
   accuracy_pct: number;
   total_docs: number;  // Total documents for this period
   docs_with_changes: number;  // Documents where values changed
+  supplier_id?: string;  // For client-side filtering
 }
 
 export interface AccuracyTrendResponse {

@@ -1,0 +1,336 @@
+{
+  "per_field": {
+    "data": [
+      {
+        "record_type": "CsrInboxState::Document",
+        "field_identifier": "document_names",
+        "total_docs": 6935,
+        "accurate_docs": 4709,
+        "accuracy_pct": 67.9
+      },
+      {
+        "record_type": "CsrInboxState::Document",
+        "field_identifier": "document_page_ranges",
+        "total_docs": 7214,
+        "accurate_docs": 5558,
+        "accuracy_pct": 77.04
+      },
+      {
+        "record_type": "CsrInboxState::CartItem",
+        "field_identifier": "cart-items",
+        "total_docs": 2776,
+        "accurate_docs": 2460,
+        "accuracy_pct": 88.62
+      },
+      {
+        "record_type": "CsrInboxState::Patient",
+        "field_identifier": "patient-first_name",
+        "total_docs": 7065,
+        "accurate_docs": 6336,
+        "accuracy_pct": 89.68
+      },
+      {
+        "record_type": "CsrInboxState::Facility",
+        "field_identifier": "facility-fax_number",
+        "total_docs": 6496,
+        "accurate_docs": 6095,
+        "accuracy_pct": 93.83
+      },
+      {
+        "record_type": "CsrInboxState::Facility",
+        "field_identifier": "facility-global_npi_facility_npi",
+        "total_docs": 242,
+        "accurate_docs": 233,
+        "accuracy_pct": 96.28
+      },
+      {
+        "record_type": "CsrInboxState::Patient",
+        "field_identifier": "patient-last_name",
+        "total_docs": 7054,
+        "accurate_docs": 6805,
+        "accuracy_pct": 96.47
+      },
+      {
+        "record_type": "CsrInboxState::Patient",
+        "field_identifier": "patient-date_of_birth",
+        "total_docs": 6854,
+        "accurate_docs": 6645,
+        "accuracy_pct": 96.95
+      },
+      {
+        "record_type": "CsrInboxState::PatientAddress",
+        "field_identifier": "patient_address-line2",
+        "total_docs": 492,
+        "accurate_docs": 479,
+        "accuracy_pct": 97.36
+      },
+      {
+        "record_type": "CsrInboxState::InsuranceInformation",
+        "field_identifier": "primary_insurance-insurance_name",
+        "total_docs": 2941,
+        "accurate_docs": 2865,
+        "accuracy_pct": 97.42
+      },
+      {
+        "record_type": "CsrInboxState::PatientAddress",
+        "field_identifier": "patient_address-phone_number",
+        "total_docs": 3928,
+        "accurate_docs": 3835,
+        "accuracy_pct": 97.63
+      },
+      {
+        "record_type": "CsrInboxState::PatientAddress",
+        "field_identifier": "patient_address-line1",
+        "total_docs": 4195,
+        "accurate_docs": 4099,
+        "accuracy_pct": 97.71
+      },
+      {
+        "record_type": "CsrInboxState::Facility",
+        "field_identifier": "facility-clinical_facility_id",
+        "total_docs": 1285,
+        "accurate_docs": 1260,
+        "accuracy_pct": 98.05
+      },
+      {
+        "record_type": "CsrInboxState::InsuranceInformation",
+        "field_identifier": "secondary_insurance-member_id",
+        "total_docs": 548,
+        "accurate_docs": 538,
+        "accuracy_pct": 98.18
+      },
+      {
+        "record_type": "CsrInboxState::PatientAddress",
+        "field_identifier": "patient_address-zip",
+        "total_docs": 3993,
+        "accurate_docs": 3931,
+        "accuracy_pct": 98.45
+      },
+      {
+        "record_type": "CsrInboxState::InsuranceInformation",
+        "field_identifier": "secondary_insurance-insurance_name",
+        "total_docs": 497,
+        "accurate_docs": 491,
+        "accuracy_pct": 98.79
+      },
+      {
+        "record_type": "CsrInboxState::PatientEmergencyContact",
+        "field_identifier": "patient_emergency_contact-first_name",
+        "total_docs": 515,
+        "accurate_docs": 509,
+        "accuracy_pct": 98.83
+      },
+      {
+        "record_type": "CsrInboxState::InsuranceInformation",
+        "field_identifier": "primary_insurance-member_id",
+        "total_docs": 3666,
+        "accurate_docs": 3625,
+        "accuracy_pct": 98.88
+      },
+      {
+        "record_type": "CsrInboxState::PatientEmergencyContact",
+        "field_identifier": "patient_emergency_contact-relationship",
+        "total_docs": 481,
+        "accurate_docs": 476,
+        "accuracy_pct": 98.96
+      },
+      {
+        "record_type": "CsrInboxState::PatientEmergencyContact",
+        "field_identifier": "patient_emergency_contact-phone_number",
+        "total_docs": 392,
+        "accurate_docs": 388,
+        "accuracy_pct": 98.98
+      },
+      {
+        "record_type": "CsrInboxState::PatientEmergencyContact",
+        "field_identifier": "patient_emergency_contact-last_name",
+        "total_docs": 475,
+        "accurate_docs": 472,
+        "accuracy_pct": 99.37
+      },
+      {
+        "record_type": "CsrInboxState::Diagnosis",
+        "field_identifier": "diagnosis-codes",
+        "total_docs": 6214,
+        "accurate_docs": 6181,
+        "accuracy_pct": 99.47
+      },
+      {
+        "record_type": "CsrInboxState::Patient",
+        "field_identifier": "patient-sex",
+        "total_docs": 5649,
+        "accurate_docs": 5621,
+        "accuracy_pct": 99.5
+      },
+      {
+        "record_type": "CsrInboxState::CartItem",
+        "field_identifier": "cart-items-sku-external-ids",
+        "total_docs": 1723,
+        "accurate_docs": 1716,
+        "accuracy_pct": 99.59
+      },
+      {
+        "record_type": "CsrInboxState::CartItem",
+        "field_identifier": "cart-items-quantities",
+        "total_docs": 1723,
+        "accurate_docs": 1716,
+        "accuracy_pct": 99.59
+      },
+      {
+        "record_type": "CsrInboxState::CartItem",
+        "field_identifier": "cart-items-hcpcs",
+        "total_docs": 1721,
+        "accurate_docs": 1715,
+        "accuracy_pct": 99.65
+      },
+      {
+        "record_type": "CsrInboxState::PatientContactInformation",
+        "field_identifier": "patient_contact_information-email",
+        "total_docs": 1527,
+        "accurate_docs": 1522,
+        "accuracy_pct": 99.67
+      },
+      {
+        "record_type": "CsrInboxState::PatientAddress",
+        "field_identifier": "patient_address-city",
+        "total_docs": 4214,
+        "accurate_docs": 4200,
+        "accuracy_pct": 99.67
+      },
+      {
+        "record_type": "CsrInboxState::Clinician",
+        "field_identifier": "clinician-doctor_id",
+        "total_docs": 4981,
+        "accurate_docs": 4968,
+        "accuracy_pct": 99.74
+      },
+      {
+        "record_type": "CsrInboxState::Patient",
+        "field_identifier": "patient-mrn",
+        "total_docs": 4002,
+        "accurate_docs": 3998,
+        "accuracy_pct": 99.9
+      },
+      {
+        "record_type": "CsrInboxState::PatientAddress",
+        "field_identifier": "patient_address-state",
+        "total_docs": 4208,
+        "accurate_docs": 4207,
+        "accuracy_pct": 99.98
+      },
+      {
+        "record_type": "CsrInboxState::Category",
+        "field_identifier": "category-names",
+        "total_docs": 4864,
+        "accurate_docs": 4864,
+        "accuracy_pct": 100.0
+      },
+      {
+        "record_type": "CsrInboxState::Patient",
+        "field_identifier": "patient-height_inches",
+        "total_docs": 2714,
+        "accurate_docs": 2714,
+        "accuracy_pct": 100.0
+      },
+      {
+        "record_type": "CsrInboxState::Patient",
+        "field_identifier": "patient-weight_lbs",
+        "total_docs": 3185,
+        "accurate_docs": 3185,
+        "accuracy_pct": 100.0
+      }
+    ],
+    "overall_accuracy_pct": 94.46,
+    "total_fields": 34
+  },
+  "document_level": {
+    "total_ai_docs": 7214,
+    "docs_with_edits": 3202,
+    "docs_no_edits": 4012,
+    "accuracy_pct": 55.61
+  },
+  "trend": {
+    "data": [
+      {
+        "date": "2025-11-03",
+        "accuracy_pct": 95.9,
+        "total_docs": 1000,
+        "docs_with_changes": 41
+      },
+      {
+        "date": "2025-11-10",
+        "accuracy_pct": 94.67,
+        "total_docs": 6077,
+        "docs_with_changes": 324
+      },
+      {
+        "date": "2025-11-17",
+        "accuracy_pct": 92.76,
+        "total_docs": 7213,
+        "docs_with_changes": 522
+      },
+      {
+        "date": "2025-11-24",
+        "accuracy_pct": 93.65,
+        "total_docs": 5289,
+        "docs_with_changes": 336
+      },
+      {
+        "date": "2025-12-01",
+        "accuracy_pct": 92.39,
+        "total_docs": 7369,
+        "docs_with_changes": 561
+      },
+      {
+        "date": "2025-12-08",
+        "accuracy_pct": 91.01,
+        "total_docs": 7734,
+        "docs_with_changes": 695
+      },
+      {
+        "date": "2025-12-15",
+        "accuracy_pct": 93.88,
+        "total_docs": 9100,
+        "docs_with_changes": 557
+      },
+      {
+        "date": "2025-12-22",
+        "accuracy_pct": 95.82,
+        "total_docs": 4616,
+        "docs_with_changes": 193
+      },
+      {
+        "date": "2025-12-29",
+        "accuracy_pct": 93.87,
+        "total_docs": 7487,
+        "docs_with_changes": 459
+      },
+      {
+        "date": "2026-01-05",
+        "accuracy_pct": 93.3,
+        "total_docs": 7788,
+        "docs_with_changes": 522
+      },
+      {
+        "date": "2026-01-12",
+        "accuracy_pct": 94.47,
+        "total_docs": 11130,
+        "docs_with_changes": 615
+      },
+      {
+        "date": "2026-01-19",
+        "accuracy_pct": 95.17,
+        "total_docs": 13603,
+        "docs_with_changes": 657
+      },
+      {
+        "date": "2026-01-26",
+        "accuracy_pct": 95.82,
+        "total_docs": 13954,
+        "docs_with_changes": 583
+      }
+    ],
+    "overall_accuracy_pct": 94.07,
+    "period": "week"
+  }
+}

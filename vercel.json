@@ -1,0 +1,6 @@
+{
+  "buildCommand": "cd frontend && npm install && VITE_STATIC_DATA=true npm run build",
+  "outputDirectory": "frontend/dist",
+  "framework": null,
+  "installCommand": "cd frontend && npm install"
+}

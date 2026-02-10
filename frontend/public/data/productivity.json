@@ -1,0 +1,568 @@
+{
+  "by_individual": {
+    "data": [
+      {
+        "user_id": "35T07-JFL3X-J4DF",
+        "user_name": "Casie Feury",
+        "total_processed": 2151,
+        "avg_per_day": 23.64,
+        "median_minutes": 2.0
+      },
+      {
+        "user_id": "T0L-LEIZ-7R9S-0P",
+        "user_name": "Cindy Barcenas",
+        "total_processed": 544,
+        "avg_per_day": 5.98,
+        "median_minutes": 4.0
+      },
+      {
+        "user_id": "IQTPK-ME-ZU-ZB31",
+        "user_name": "Demi Foos",
+        "total_processed": 405,
+        "avg_per_day": 4.45,
+        "median_minutes": 17.0
+      },
+      {
+        "user_id": "ZIF17-3J8-KU2-TL",
+        "user_name": "Monique Covarrubias",
+        "total_processed": 371,
+        "avg_per_day": 4.08,
+        "median_minutes": 2.0
+      },
+      {
+        "user_id": "YNX-27B-QGU-ANY5",
+        "user_name": "Jantoni San Juan",
+        "total_processed": 353,
+        "avg_per_day": 3.88,
+        "median_minutes": 4.0
+      },
+      {
+        "user_id": "X4K-2I7-DAR79-2R",
+        "user_name": "Kevin Tapia",
+        "total_processed": 343,
+        "avg_per_day": 3.77,
+        "median_minutes": 1.0
+      },
+      {
+        "user_id": "9G-G063-JQZ9J-19",
+        "user_name": "Marcella Farson",
+        "total_processed": 341,
+        "avg_per_day": 3.75,
+        "median_minutes": 17.0
+      },
+      {
+        "user_id": "28-YX2XH-A50-5PA",
+        "user_name": "Anoi Bernard",
+        "total_processed": 262,
+        "avg_per_day": 2.88,
+        "median_minutes": 7.0
+      },
+      {
+        "user_id": "Y8-BJKJ-8D-4R29K",
+        "user_name": "Magda Valentin",
+        "total_processed": 251,
+        "avg_per_day": 2.76,
+        "median_minutes": 5.0
+      },
+      {
+        "user_id": "D06-L4YC-XE9-L49",
+        "user_name": "Thalandus Lee",
+        "total_processed": 202,
+        "avg_per_day": 2.22,
+        "median_minutes": 8.0
+      },
+      {
+        "user_id": "8DA-QV-TH3-ZN3RS",
+        "user_name": "Caryn Hudia",
+        "total_processed": 166,
+        "avg_per_day": 1.82,
+        "median_minutes": 1.5
+      },
+      {
+        "user_id": "YDIBI-G8BDB-X2RA",
+        "user_name": "Holly Hardenbergh",
+        "total_processed": 146,
+        "avg_per_day": 1.6,
+        "median_minutes": 40.0
+      },
+      {
+        "user_id": "69NL-NU-1M5YI-LI",
+        "user_name": "Alondra Garcia Miranda",
+        "total_processed": 131,
+        "avg_per_day": 1.44,
+        "median_minutes": 8.0
+      },
+      {
+        "user_id": "YT4-QT-XYD-BXSJ1",
+        "user_name": "Melissa McColgan",
+        "total_processed": 111,
+        "avg_per_day": 1.22,
+        "median_minutes": 15.0
+      },
+      {
+        "user_id": "D7-CPLEX-YEDF-JC",
+        "user_name": "Hua Vang",
+        "total_processed": 100,
+        "avg_per_day": 1.1,
+        "median_minutes": 4.0
+      },
+      {
+        "user_id": "8A-Z9U-RT8Z1-AGD",
+        "user_name": "Ian Mattox",
+        "total_processed": 99,
+        "avg_per_day": 1.09,
+        "median_minutes": 32.0
+      },
+      {
+        "user_id": "KZNG-A2ZUH-FG-SE",
+        "user_name": "Anna Lloyd",
+        "total_processed": 77,
+        "avg_per_day": 0.85,
+        "median_minutes": 2.0
+      },
+      {
+        "user_id": "X4FT-TGQ-4BDB-Z3",
+        "user_name": "Nina Luzar",
+        "total_processed": 69,
+        "avg_per_day": 0.76,
+        "median_minutes": 4.0
+      },
+      {
+        "user_id": "SH5-573BQ-GA-DBI",
+        "user_name": "Sarah York",
+        "total_processed": 57,
+        "avg_per_day": 0.63,
+        "median_minutes": 27.0
+      },
+      {
+        "user_id": "LK-XV-PK-GDH8-R6",
+        "user_name": "Ashley Pratt",
+        "total_processed": 56,
+        "avg_per_day": 0.62,
+        "median_minutes": 33.5
+      },
+      {
+        "user_id": "YE-M52FZ-JDY2-M3",
+        "user_name": "Cathy Garcia",
+        "total_processed": 53,
+        "avg_per_day": 0.58,
+        "median_minutes": 2.0
+      },
+      {
+        "user_id": "NV5-R0NJ-ED0R-J0",
+        "user_name": "Diana Brumbaugh",
+        "total_processed": 28,
+        "avg_per_day": 0.31,
+        "median_minutes": 33.0
+      },
+      {
+        "user_id": "SVE-6EVPI-BXA-RP",
+        "user_name": "Staphany Newsome",
+        "total_processed": 26,
+        "avg_per_day": 0.29,
+        "median_minutes": 56.0
+      },
+      {
+        "user_id": "L18CM-AF8LJ-XCYH",
+        "user_name": "Barbara Timo",
+        "total_processed": 19,
+        "avg_per_day": 0.21,
+        "median_minutes": 11.0
+      },
+      {
+        "user_id": "P1L7-JLGI-MB9-4F",
+        "user_name": "Yekaterina Zhukova",
+        "total_processed": 13,
+        "avg_per_day": 0.14,
+        "median_minutes": 50.0
+      },
+      {
+        "user_id": "EC-GALDL-B2HD-AL",
+        "user_name": "Dawn DiCarro",
+        "total_processed": 8,
+        "avg_per_day": 0.09,
+        "median_minutes": 19.0
+      },
+      {
+        "user_id": "0RCL-YJ-6R9FZ-XJ",
+        "user_name": "Kelly Dumas",
+        "total_processed": 8,
+        "avg_per_day": 0.09,
+        "median_minutes": 60.0
+      },
+      {
+        "user_id": "RMV-3U-GR8NE-LTL",
+        "user_name": "Daniel Avila",
+        "total_processed": 6,
+        "avg_per_day": 0.07,
+        "median_minutes": 26.5
+      },
+      {
+        "user_id": "U2KS-BJS-6LB-1KM",
+        "user_name": "Anne Blaisdell",
+        "total_processed": 5,
+        "avg_per_day": 0.05,
+        "median_minutes": null
+      },
+      {
+        "user_id": "J8N6T-PNPB0-XETJ",
+        "user_name": "Whitney Crnkovic",
+        "total_processed": 5,
+        "avg_per_day": 0.05,
+        "median_minutes": 3.5
+      },
+      {
+        "user_id": "NIFS0-5A7D-BI-DG",
+        "user_name": "Sheila Rodriguez",
+        "total_processed": 2,
+        "avg_per_day": 0.02,
+        "median_minutes": 38.0
+      },
+      {
+        "user_id": "JQK-RD4-JLRF-TM9",
+        "user_name": "Tommy Mahall",
+        "total_processed": 2,
+        "avg_per_day": 0.02,
+        "median_minutes": null
+      },
+      {
+        "user_id": "N7I2-7THQF-4XS97",
+        "user_name": "Gaby Becerra",
+        "total_processed": 2,
+        "avg_per_day": 0.02,
+        "median_minutes": null
+      },
+      {
+        "user_id": "0AF-X3PBQ-CD-S54",
+        "user_name": "Manuel Gorotiza",
+        "total_processed": 2,
+        "avg_per_day": 0.02,
+        "median_minutes": null
+      },
+      {
+        "user_id": "ZF-S8JBA-3TM-P61",
+        "user_name": "Nicaury Cabrera",
+        "total_processed": 2,
+        "avg_per_day": 0.02,
+        "median_minutes": null
+      },
+      {
+        "user_id": "1V-RVJ-1PIN-G2MN",
+        "user_name": "Barbara Fuger",
+        "total_processed": 2,
+        "avg_per_day": 0.02,
+        "median_minutes": null
+      },
+      {
+        "user_id": "0E4-GSG0-J0-1H8H",
+        "user_name": "Nikki Freed",
+        "total_processed": 2,
+        "avg_per_day": 0.02,
+        "median_minutes": 1.0
+      },
+      {
+        "user_id": "LX-FEVJ-RMX-ELA5",
+        "user_name": "Katherine Ziner",
+        "total_processed": 1,
+        "avg_per_day": 0.01,
+        "median_minutes": null
+      },
+      {
+        "user_id": "QRXFV-9ICV-7N3MU",
+        "user_name": "Teinasha Briggs",
+        "total_processed": 1,
+        "avg_per_day": 0.01,
+        "median_minutes": null
+      },
+      {
+        "user_id": "4BG3-3CB-TLF8-KP",
+        "user_name": "Amanda Hernandez",
+        "total_processed": 1,
+        "avg_per_day": 0.01,
+        "median_minutes": null
+      },
+      {
+        "user_id": "X70-C793-KN2Q-9N",
+        "user_name": "Danielle Abustan",
+        "total_processed": 1,
+        "avg_per_day": 0.01,
+        "median_minutes": null
+      },
+      {
+        "user_id": "8QEVU-F3Z-HC-2TJ",
+        "user_name": "Reagan Tidwell",
+        "total_processed": 1,
+        "avg_per_day": 0.01,
+        "median_minutes": null
+      },
+      {
+        "user_id": "1S9I-DI-J50Q-Z3T",
+        "user_name": "Thomas Lay",
+        "total_processed": 1,
+        "avg_per_day": 0.01,
+        "median_minutes": 2.0
+      },
+      {
+        "user_id": "0B1-YNCR4-JD-DY3",
+        "user_name": "Emily Polk",
+        "total_processed": 1,
+        "avg_per_day": 0.01,
+        "median_minutes": null
+      },
+      {
+        "user_id": "V2ZLA-CLG2-AM-SF",
+        "user_name": "Angie Chavez",
+        "total_processed": 1,
+        "avg_per_day": 0.01,
+        "median_minutes": 1.0
+      },
+      {
+        "user_id": "XV-DIVI-UBUXQ-VM",
+        "user_name": "Claudia Krajncic",
+        "total_processed": 1,
+        "avg_per_day": 0.01,
+        "median_minutes": null
+      },
+      {
+        "user_id": "6AZC-1Y3F9-96-4H",
+        "user_name": "Amanda Maurer",
+        "total_processed": 1,
+        "avg_per_day": 0.01,
+        "median_minutes": 1.0
+      },
+      {
+        "user_id": "Y0K-C4SBJ-QM-X9Y",
+        "user_name": "Ludmilla Rabello, Pharm.D",
+        "total_processed": 1,
+        "avg_per_day": 0.01,
+        "median_minutes": null
+      },
+      {
+        "user_id": "UVD-TBZ-JC-CU-04",
+        "user_name": "Essence Goodwin",
+        "total_processed": 1,
+        "avg_per_day": 0.01,
+        "median_minutes": null
+      },
+      {
+        "user_id": "KXK5D-EDE1Q-D7L6",
+        "user_name": "Shereka Aikens",
+        "total_processed": 1,
+        "avg_per_day": 0.01,
+        "median_minutes": 12.0
+      }
+    ],
+    "total_processed": 6433,
+    "unique_individuals": 50
+  },
+  "daily_average": {
+    "data": []
+  },
+  "category_breakdown": {
+    "data": [
+      {
+        "user_id": "NG-VB9K-CQ1V7-FY",
+        "user_name": "Abdul Mohamedali",
+        "category": "Diabetes",
+        "count": 1,
+        "percentage": 100.0
+      },
+      {
+        "user_id": "L18CM-AF8LJ-XCYH",
+        "user_name": "Barbara Timo",
+        "category": "Diabetes",
+        "count": 2,
+        "percentage": 100.0
+      },
+      {
+        "user_id": "YR-Z5E-AE2QL-VUV",
+        "user_name": "Danielle Abustan",
+        "category": "Diabetes",
+        "count": 1,
+        "percentage": 100.0
+      },
+      {
+        "user_id": "BL0-47A9-E2UG-5R",
+        "user_name": "Edgepark (Diabetes) System",
+        "category": "Diabetes",
+        "count": 1,
+        "percentage": 100.0
+      },
+      {
+        "user_id": "JTI-MI7L-DFI8-NE",
+        "user_name": "Edgepark API Client <Supplier Custom>",
+        "category": "Nursing Supplies",
+        "count": 1,
+        "percentage": 100.0
+      },
+      {
+        "user_id": "9FAEG-QM-T3CI-4R",
+        "user_name": "Edgepark Medical Agent",
+        "category": "Diabetes",
+        "count": 8481,
+        "percentage": 82.71
+      },
+      {
+        "user_id": "9FAEG-QM-T3CI-4R",
+        "user_name": "Edgepark Medical Agent",
+        "category": "Ostomy",
+        "count": 715,
+        "percentage": 6.97
+      },
+      {
+        "user_id": "9FAEG-QM-T3CI-4R",
+        "user_name": "Edgepark Medical Agent",
+        "category": "Nursing Supplies",
+        "count": 539,
+        "percentage": 5.26
+      },
+      {
+        "user_id": "9FAEG-QM-T3CI-4R",
+        "user_name": "Edgepark Medical Agent",
+        "category": "Pregnancy & Maternity",
+        "count": 245,
+        "percentage": 2.39
+      },
+      {
+        "user_id": "9FAEG-QM-T3CI-4R",
+        "user_name": "Edgepark Medical Agent",
+        "category": "Continued Use & Benefit",
+        "count": 214,
+        "percentage": 2.09
+      },
+      {
+        "user_id": "9FAEG-QM-T3CI-4R",
+        "user_name": "Edgepark Medical Agent",
+        "category": "Urology",
+        "count": 157,
+        "percentage": 1.53
+      },
+      {
+        "user_id": "9FAEG-QM-T3CI-4R",
+        "user_name": "Edgepark Medical Agent",
+        "category": "Skin Care",
+        "count": 76,
+        "percentage": 0.74
+      },
+      {
+        "user_id": "9FAEG-QM-T3CI-4R",
+        "user_name": "Edgepark Medical Agent",
+        "category": "Wound Care",
+        "count": 22,
+        "percentage": 0.21
+      },
+      {
+        "user_id": "9FAEG-QM-T3CI-4R",
+        "user_name": "Edgepark Medical Agent",
+        "category": "Service Requests",
+        "count": 15,
+        "percentage": 0.15
+      },
+      {
+        "user_id": "9FAEG-QM-T3CI-4R",
+        "user_name": "Edgepark Medical Agent",
+        "category": "Uncategorized",
+        "count": 7,
+        "percentage": 0.07
+      },
+      {
+        "user_id": "9FAEG-QM-T3CI-4R",
+        "user_name": "Edgepark Medical Agent",
+        "category": "Compression",
+        "count": 3,
+        "percentage": 0.03
+      },
+      {
+        "user_id": "9FAEG-QM-T3CI-4R",
+        "user_name": "Edgepark Medical Agent",
+        "category": "Incontinence",
+        "count": 2,
+        "percentage": 0.02
+      },
+      {
+        "user_id": "9FAEG-QM-T3CI-4R",
+        "user_name": "Edgepark Medical Agent",
+        "category": "Mobility",
+        "count": 1,
+        "percentage": 0.01
+      },
+      {
+        "user_id": "9FAEG-QM-T3CI-4R",
+        "user_name": "Edgepark Medical Agent",
+        "category": "Ostomy Legacy",
+        "count": 1,
+        "percentage": 0.01
+      },
+      {
+        "user_id": "RM60-3R8-XVBY-FK",
+        "user_name": "Edgepark Proactive Renewal Agent",
+        "category": "Continued Use & Benefit",
+        "count": 770,
+        "percentage": 97.96
+      },
+      {
+        "user_id": "RM60-3R8-XVBY-FK",
+        "user_name": "Edgepark Proactive Renewal Agent",
+        "category": "Diabetes",
+        "count": 49,
+        "percentage": 6.23
+      },
+      {
+        "user_id": "3JFUS-X58I4-6SQZ",
+        "user_name": "Edgepark RX Renewal Agent",
+        "category": "Continued Use & Benefit",
+        "count": 9188,
+        "percentage": 68.92
+      },
+      {
+        "user_id": "3JFUS-X58I4-6SQZ",
+        "user_name": "Edgepark RX Renewal Agent",
+        "category": "Diabetes",
+        "count": 3726,
+        "percentage": 27.95
+      },
+      {
+        "user_id": "3JFUS-X58I4-6SQZ",
+        "user_name": "Edgepark RX Renewal Agent",
+        "category": "Ostomy",
+        "count": 580,
+        "percentage": 4.35
+      },
+      {
+        "user_id": "3JFUS-X58I4-6SQZ",
+        "user_name": "Edgepark RX Renewal Agent",
+        "category": "Urology",
+        "count": 128,
+        "percentage": 0.96
+      },
+      {
+        "user_id": "3JFUS-X58I4-6SQZ",
+        "user_name": "Edgepark RX Renewal Agent",
+        "category": "Skin Care",
+        "count": 52,
+        "percentage": 0.39
+      },
+      {
+        "user_id": "3JFUS-X58I4-6SQZ",
+        "user_name": "Edgepark RX Renewal Agent",
+        "category": "Uncategorized",
+        "count": 30,
+        "percentage": 0.23
+      },
+      {
+        "user_id": "3JFUS-X58I4-6SQZ",
+        "user_name": "Edgepark RX Renewal Agent",
+        "category": "Nursing Supplies",
+        "count": 29,
+        "percentage": 0.22
+      },
+      {
+        "user_id": "JZ57G-Q92D-HT8IH",
+        "user_name": "Karyssa VanDeuren Williams",
+        "category": "Continued Use & Benefit",
+        "count": 3,
+        "percentage": 100.0
+      }
+    ]
+  }
+}

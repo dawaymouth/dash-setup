@@ -11,8 +11,8 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { format, parseISO, subDays } from 'date-fns';
-import type { FilterState, TimeOfDayDocument } from '../types';
-import { useFaxVolume, useFaxVolumeTrend, usePagesStats, useCategoryDistribution, useTimeOfDayVolume } from '../hooks/useMetrics';
+import type { FilterState } from '../types';
+import { useFaxVolumeTrend, usePagesStats, useCategoryDistribution, useTimeOfDayVolume } from '../hooks/useMetrics';
 import { Modal } from './Modal';
 import { InfoButton } from './InfoButton';
 import { VolumeCalculations } from './calculationDocs';

@@ -77,6 +77,7 @@ async def get_productivity_by_individual(
             SELECT 
                 la.user_external_id,
                 la.user_name,
+                d.supplier_id,
                 CASE 
                     WHEN first_acc.user_id = last_acc.user_id 
                          AND first_acc.user_id IS NOT NULL
@@ -103,11 +104,12 @@ async def get_productivity_by_individual(
         SELECT 
             user_external_id as user_id,
             user_name,
+            supplier_id,
             COUNT(*) as total_processed,
             PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY processing_minutes) as median_minutes
         FROM user_processing_times
-        GROUP BY 1, 2
-        ORDER BY 3 DESC
+        GROUP BY 1, 2, 3
+        ORDER BY 4 DESC
         LIMIT {limit}
     """
     
@@ -119,7 +121,8 @@ async def get_productivity_by_individual(
             user_name=row["user_name"] or "Unknown",
             total_processed=row["total_processed"],
             avg_per_day=round(row["total_processed"] / days_in_range, 2),
-            median_minutes=round(float(row["median_minutes"]), 1) if row.get("median_minutes") else None
+            median_minutes=round(float(row["median_minutes"]), 1) if row.get("median_minutes") else None,
+            supplier_id=row.get("supplier_id")
         )
         for row in results
     ]
@@ -190,6 +193,7 @@ async def get_daily_average_productivity(
             SELECT 
                 la.user_external_id,
                 la.user_name,
+                d.supplier_id,
                 d.document_created_at,
                 CASE 
                     WHEN first_acc.user_id = last_acc.user_id 
@@ -218,21 +222,23 @@ async def get_daily_average_productivity(
             SELECT 
                 user_external_id as user_id,
                 user_name,
+                supplier_id,
                 DATE_TRUNC('day', document_created_at)::date as work_date,
                 COUNT(*) as daily_count,
                 PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY processing_minutes) as daily_median_minutes
             FROM user_docs_with_times
-            GROUP BY 1, 2, 3
+            GROUP BY 1, 2, 3, 4
         )
         SELECT 
             user_id,
             user_name,
+            supplier_id,
             SUM(daily_count) as total_processed,
             AVG(daily_count) as avg_per_day,
             COUNT(DISTINCT work_date) as active_days,
             PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY daily_median_minutes) as median_minutes
         FROM daily_counts
-        GROUP BY 1, 2
+        GROUP BY 1, 2, 3
         ORDER BY avg_per_day DESC
         LIMIT {limit}
     """
@@ -245,7 +251,8 @@ async def get_daily_average_productivity(
             user_name=row["user_name"] or "Unknown",
             total_processed=row["total_processed"],
             avg_per_day=round(float(row["avg_per_day"]), 2) if row["avg_per_day"] else 0,
-            median_minutes=round(float(row["median_minutes"]), 1) if row.get("median_minutes") else None
+            median_minutes=round(float(row["median_minutes"]), 1) if row.get("median_minutes") else None,
+            supplier_id=row.get("supplier_id")
         )
         for row in results
     ]
@@ -302,18 +309,20 @@ async def get_category_by_individual(
             SELECT 
                 o.assignee_id as user_id,
                 o.assignee as user_name,
+                o.supplier_id,
                 COUNT(*) as total_orders
             FROM analytics.orders o
             LEFT JOIN interim.suppliers s ON o.supplier_id = s.external_id
             WHERE {where_sql}
-            GROUP BY 1, 2
-            ORDER BY 3 DESC
+            GROUP BY 1, 2, 3
+            ORDER BY 4 DESC
             LIMIT {limit}
         ),
         category_counts AS (
             SELECT 
                 o.assignee_id as user_id,
                 o.assignee as user_name,
+                o.supplier_id,
                 COALESCE(os.category, 'Uncategorized') as category,
                 COUNT(DISTINCT o.order_id) as count
             FROM analytics.orders o
@@ -321,16 +330,17 @@ async def get_category_by_individual(
             LEFT JOIN interim.suppliers s ON o.supplier_id = s.external_id
             WHERE {where_sql}
               AND o.assignee_id IN (SELECT user_id FROM individual_totals)
-            GROUP BY 1, 2, 3
+            GROUP BY 1, 2, 3, 4
         )
         SELECT 
             cc.user_id,
             cc.user_name,
+            cc.supplier_id,
             cc.category,
             cc.count,
             ROUND(cc.count * 100.0 / it.total_orders, 2) as percentage
         FROM category_counts cc
-        JOIN individual_totals it ON cc.user_id = it.user_id
+        JOIN individual_totals it ON cc.user_id = it.user_id AND cc.supplier_id = it.supplier_id
         ORDER BY cc.user_name, cc.count DESC
     """
     
@@ -342,7 +352,8 @@ async def get_category_by_individual(
             user_name=row["user_name"] or "Unknown",
             category=row["category"],
             count=row["count"],
-            percentage=float(row["percentage"]) if row["percentage"] else 0
+            percentage=float(row["percentage"]) if row["percentage"] else 0,
+            supplier_id=row.get("supplier_id")
         )
         for row in results
     ]
@@ -395,6 +406,7 @@ async def get_processing_time_by_individual(
         WITH same_user_docs AS (
             SELECT 
                 d.intake_document_id,
+                d.supplier_id,
                 first_acc.user_id,
                 u.external_id as user_external_id,
                 u.first_name || ' ' || u.last_name as user_name,
@@ -421,12 +433,13 @@ async def get_processing_time_by_individual(
         SELECT 
             user_external_id as user_id,
             user_name,
+            supplier_id,
             COUNT(*) as total_processed,
             PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY processing_minutes) as median_minutes
         FROM same_user_docs
-        GROUP BY 1, 2
+        GROUP BY 1, 2, 3
         HAVING COUNT(*) >= 5
-        ORDER BY 4 ASC
+        ORDER BY 5 ASC
         LIMIT {limit}
     """
     
@@ -438,7 +451,8 @@ async def get_processing_time_by_individual(
             user_name=row["user_name"],
             total_processed=row["total_processed"],
             avg_per_day=round(row["total_processed"] / days_in_range, 1),
-            median_minutes=round(float(row["median_minutes"]), 1) if row.get("median_minutes") else None
+            median_minutes=round(float(row["median_minutes"]), 1) if row.get("median_minutes") else None,
+            supplier_id=row.get("supplier_id")
         )
         for row in results
     ]

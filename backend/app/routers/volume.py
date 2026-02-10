@@ -79,18 +79,19 @@ async def get_fax_volume(
     query = f"""
         SELECT 
             {date_trunc}::date as date,
+            supplier_id,
             COUNT(*) as count
         FROM analytics.intake_documents
         WHERE {where_sql}
           {incomplete_week_filter}
-        GROUP BY 1
-        ORDER BY 1
+        GROUP BY 1, 2
+        ORDER BY 1, 2
     """
     
     results = execute_query(query)
     
     volume_data = [
-        FaxVolumeByDate(date=row["date"], count=row["count"])
+        FaxVolumeByDate(date=row["date"], count=row["count"], supplier_id=row.get("supplier_id"))
         for row in results
     ]
     
@@ -184,14 +185,14 @@ async def get_category_distribution(
     
     query = f"""
         SELECT 
+            o.supplier_id,
             COALESCE(os.category, 'Uncategorized') as category,
             COUNT(DISTINCT o.order_id) as count
         FROM analytics.orders o
         LEFT JOIN analytics.order_skus os ON o.order_id = os.order_id
         WHERE {where_sql}
-        GROUP BY 1
-        ORDER BY 2 DESC
-        LIMIT 20
+        GROUP BY 1, 2
+        ORDER BY 1, 3 DESC
     """
     
     results = execute_query(query)
@@ -202,7 +203,8 @@ async def get_category_distribution(
         CategoryDistribution(
             category=row["category"],
             count=row["count"],
-            percentage=round((row["count"] / total * 100) if total > 0 else 0, 2)
+            percentage=round((row["count"] / total * 100) if total > 0 else 0, 2),
+            supplier_id=row.get("supplier_id")
         )
         for row in results
     ]
@@ -248,6 +250,7 @@ async def get_time_of_day_volume(
     
     query = f"""
         SELECT 
+            supplier_id,
             document_created_at AT TIME ZONE 'UTC' as document_created_at
         FROM analytics.intake_documents
         WHERE {where_sql}
@@ -256,7 +259,7 @@ async def get_time_of_day_volume(
     results = execute_query(query)
     
     time_data = [
-        TimeOfDayDocument(timestamp=row["document_created_at"])
+        TimeOfDayDocument(timestamp=row["document_created_at"], supplier_id=row.get("supplier_id"))
         for row in results
     ]
     

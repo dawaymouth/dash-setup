@@ -39,9 +39,9 @@ export const ProductivityMetrics: React.FC<ProductivityMetricsProps> = ({ filter
       return sorted.sort((a, b) => b.avg_per_day - a.avg_per_day);
     } else { // speed
       return sorted.sort((a, b) => {
-        // Handle null values - push to end
-        if (a.median_minutes === null) return 1;
-        if (b.median_minutes === null) return -1;
+        // Handle null/undefined values - push to end
+        if (a.median_minutes === null || a.median_minutes === undefined) return 1;
+        if (b.median_minutes === null || b.median_minutes === undefined) return -1;
         return a.median_minutes - b.median_minutes; // Ascending - fastest first
       });
     }
