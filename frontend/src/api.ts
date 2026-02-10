@@ -349,9 +349,13 @@ export const fetchFaxVolumeTrend = async (
     const filtered = filterBySupplier(volumeData, staticData.currentSupplierId);
     const aggregated = aggregateVolumeByDate(filtered);
 
+    const startStr = formatDate(startDate);
+    const endStr = formatDate(endDate);
+    const inRange = aggregated.filter((row) => row.date >= startStr && row.date <= endStr);
+
     // Aggregate daily data into weekly buckets
     const weeklyMap = new Map<string, number>();
-    for (const row of aggregated) {
+    for (const row of inRange) {
       const weekStart = startOfWeek(new Date(row.date + 'T00:00:00'), { weekStartsOn: 1 });
       const weekKey = format(weekStart, 'yyyy-MM-dd');
       weeklyMap.set(weekKey, (weeklyMap.get(weekKey) || 0) + row.count);
@@ -387,12 +391,14 @@ export const fetchFaxVolumeTrend = async (
 export const fetchPagesStats = async (filters: FilterState): Promise<PagesStatsResponse> => {
   if (STATIC_MODE) {
     await loadStaticData();
-    // Pages is a single aggregate — check per-supplier data first
+    // Pages is a single aggregate — check per-supplier data first; always return an object
     const supplierId = staticData.currentSupplierId;
+    const orgPages = staticData.organization?.pages;
     if (supplierId && staticData.perSupplier?.[supplierId]?.pages) {
-      return staticData.perSupplier[supplierId].pages;
+      const p = staticData.perSupplier[supplierId].pages;
+      return { total_documents: p?.total_documents ?? 0, total_pages: p?.total_pages ?? 0 };
     }
-    return staticData.organization?.pages || {};
+    return { total_documents: orgPages?.total_documents ?? 0, total_pages: orgPages?.total_pages ?? 0 };
   }
   
   const { data } = await api.get('/volume/pages', {
@@ -498,8 +504,8 @@ export const fetchStateDistribution = async (
   if (STATIC_MODE) {
     await loadStaticData();
     const staticResponse = staticData.organization?.cycle_time?.state_distribution;
-    if (staticResponse) {
-      return staticResponse as StateDistributionResponse;
+    if (staticResponse && Array.isArray(staticResponse.data)) {
+      return { data: staticResponse.data, total: staticResponse.total ?? 0 };
     }
     return { data: [], total: 0 };
   }
@@ -723,12 +729,24 @@ export const fetchDocumentAccuracy = async (
 ): Promise<DocumentAccuracyResponse> => {
   if (STATIC_MODE) {
     await loadStaticData();
-    // Document-level accuracy is a single aggregate — check per-supplier data first
+    // Document-level accuracy is a single aggregate — check per-supplier data first; always return a safe object
     const supplierId = staticData.currentSupplierId;
+    const orgDoc = staticData.organization?.accuracy?.document_level;
     if (supplierId && staticData.perSupplier?.[supplierId]?.document_accuracy) {
-      return staticData.perSupplier[supplierId].document_accuracy;
+      const d = staticData.perSupplier[supplierId].document_accuracy;
+      return {
+        total_ai_docs: d?.total_ai_docs ?? 0,
+        docs_with_edits: d?.docs_with_edits ?? 0,
+        docs_no_edits: d?.docs_no_edits ?? 0,
+        accuracy_pct: d?.accuracy_pct ?? 0,
+      };
     }
-    return staticData.organization?.accuracy?.document_level || {};
+    return {
+      total_ai_docs: orgDoc?.total_ai_docs ?? 0,
+      docs_with_edits: orgDoc?.docs_with_edits ?? 0,
+      docs_no_edits: orgDoc?.docs_no_edits ?? 0,
+      accuracy_pct: orgDoc?.accuracy_pct ?? 0,
+    };
   }
   
   const { data } = await api.get('/accuracy/document-level', {
@@ -780,7 +798,10 @@ export const fetchFieldAccuracyTrend = async (
     const rawData = (staticData.organization?.accuracy?.field_level_trend?.data
                  || staticData.organization?.accuracy?.trend?.data || []) as Array<{date: string, accuracy_pct: number, total_docs: number, docs_with_changes: number, supplier_id?: string}>;
     const filtered = filterBySupplier(rawData, staticData.currentSupplierId);
-    const aggregated = aggregateAccuracyTrend(filtered);
+    const startStr = formatDate(startDate);
+    const endStr = formatDate(endDate);
+    const inRange = filtered.filter((row) => row.date >= startStr && row.date <= endStr);
+    const aggregated = aggregateAccuracyTrend(inRange);
     const totalDocs = aggregated.reduce((s, r) => s + r.total_docs, 0);
     const totalChanges = aggregated.reduce((s, r) => s + r.docs_with_changes, 0);
     return {

@@ -170,7 +170,7 @@ export const VolumeMetrics: React.FC<VolumeMetricsProps> = ({ filters }) => {
             <div className="bg-green-50 rounded-lg p-4">
               <p className="text-sm text-green-600 font-medium">Total Pages Received</p>
               <p className="text-3xl font-bold text-green-700">
-                {pagesData?.total_pages.toLocaleString() || 0}
+                {(pagesData?.total_pages ?? 0).toLocaleString()}
               </p>
             </div>
           </div>
@@ -305,7 +305,7 @@ export const VolumeMetrics: React.FC<VolumeMetricsProps> = ({ filters }) => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {categoryData?.data
+                  {(categoryData?.data ?? [])
                     .sort((a, b) => b.percentage - a.percentage)
                     .map((item, index) => (
                       <tr

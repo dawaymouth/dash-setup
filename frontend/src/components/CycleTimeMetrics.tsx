@@ -192,7 +192,7 @@ export const CycleTimeMetrics: React.FC<CycleTimeMetricsProps> = ({ filters }) =
                 </ResponsiveContainer>
               </div>
               <p className="text-xs text-gray-400 mt-1 text-right">
-                Total: {stateData.total.toLocaleString()} documents
+                Total: {(stateData?.total ?? 0).toLocaleString()} documents
               </p>
             </div>
           )}

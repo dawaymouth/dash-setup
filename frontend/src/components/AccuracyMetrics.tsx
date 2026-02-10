@@ -139,9 +139,9 @@ export const AccuracyMetrics: React.FC<AccuracyMetricsProps> = ({ filters }) => 
   const FieldItem: React.FC<{ field: FieldAccuracy }> = ({ field }) => (
     <div className="flex items-center justify-between text-xs py-0.5 hover:bg-white hover:bg-opacity-30 px-1 rounded break-inside-avoid">
       <span className="truncate">
-        <span className="font-medium">{formatRecordType(field.record_type)}</span>: {formatFieldName(field.field_identifier)}
+        <span className="font-medium">{formatRecordType(field.record_type ?? '')}</span>: {formatFieldName(field.field_identifier ?? '')}
       </span>
-      <span className="ml-2 flex-shrink-0 font-mono">{field.accuracy_pct.toFixed(1)}%</span>
+      <span className="ml-2 flex-shrink-0 font-mono">{(field.accuracy_pct ?? 0).toFixed(1)}%</span>
     </div>
   );
 
@@ -168,10 +168,10 @@ export const AccuracyMetrics: React.FC<AccuracyMetricsProps> = ({ filters }) => 
                 Field Accuracy
               </p>
               <p className="text-3xl font-bold text-blue-700">
-                {fieldAccuracyData?.overall_accuracy_pct.toFixed(1) || 0}%
+                {(fieldAccuracyData?.overall_accuracy_pct ?? 0).toFixed(1)}%
               </p>
               <p className="text-xs text-blue-500 mt-1">
-                {fieldAccuracyData?.total_fields || 0} fields tracked
+                {fieldAccuracyData?.total_fields ?? 0} fields tracked
               </p>
             </div>
             <div className="bg-green-50 rounded-lg p-4">
@@ -179,10 +179,10 @@ export const AccuracyMetrics: React.FC<AccuracyMetricsProps> = ({ filters }) => 
                 No Edits Made
               </p>
               <p className="text-3xl font-bold text-green-700">
-                {docAccuracyData?.accuracy_pct.toFixed(1) || 0}%
+                {(docAccuracyData?.accuracy_pct ?? 0).toFixed(1)}%
               </p>
               <p className="text-xs text-green-500 mt-1">
-                {docAccuracyData?.docs_no_edits.toLocaleString() || 0} documents
+                {(docAccuracyData?.docs_no_edits ?? 0).toLocaleString()} documents
               </p>
             </div>
             <div className="bg-orange-50 rounded-lg p-4">
@@ -190,10 +190,10 @@ export const AccuracyMetrics: React.FC<AccuracyMetricsProps> = ({ filters }) => 
                 Edits Made
               </p>
               <p className="text-3xl font-bold text-orange-700">
-                {(100 - (docAccuracyData?.accuracy_pct || 0)).toFixed(1)}%
+                {(100 - (docAccuracyData?.accuracy_pct ?? 0)).toFixed(1)}%
               </p>
               <p className="text-xs text-orange-500 mt-1">
-                {docAccuracyData?.docs_with_edits.toLocaleString() || 0} documents
+                {(docAccuracyData?.docs_with_edits ?? 0).toLocaleString()} documents
               </p>
             </div>
           </div>

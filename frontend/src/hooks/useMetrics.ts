@@ -36,8 +36,11 @@ export const useFaxVolumeTrend = (
   endDate: Date,
   period: 'week' = 'week'
 ) => {
+  // Serialize dates in key so changing Range (30d/90d/etc.) triggers a new query
+  const startStr = startDate.toISOString().slice(0, 10);
+  const endStr = endDate.toISOString().slice(0, 10);
   return useQuery({
-    queryKey: ['faxVolumeTrend', filters, startDate, endDate, period],
+    queryKey: ['faxVolumeTrend', filters, startStr, endStr, period],
     queryFn: () => fetchFaxVolumeTrend(filters, startDate, endDate, period),
     retry: 2,
     staleTime: 5 * 60 * 1000,
@@ -170,8 +173,11 @@ export const useFieldAccuracyTrend = (
   endDate: Date,
   period: 'day' | 'week' = 'day'
 ) => {
+  // Serialize dates in key so changing Range (30d/90d/etc.) triggers a new query
+  const startStr = startDate.toISOString().slice(0, 10);
+  const endStr = endDate.toISOString().slice(0, 10);
   return useQuery({
-    queryKey: ['fieldAccuracyTrend', filters, startDate, endDate, period],
+    queryKey: ['fieldAccuracyTrend', filters, startStr, endStr, period],
     queryFn: () => fetchFieldAccuracyTrend(filters, startDate, endDate, period),
     retry: 2, // Only retry twice instead of default 3
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes

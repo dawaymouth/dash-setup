@@ -49,8 +49,8 @@ export const ProductivityMetrics: React.FC<ProductivityMetricsProps> = ({ filter
 
   // Prepare chart data - top 10 performers based on current sort
   const chartData = sortedData.slice(0, 10).map((item) => ({
-    name: item.user_name.split(' ')[0], // First name only for chart
-    fullName: item.user_name,
+    name: (item.user_name || '').split(' ')[0] || '—', // First name only for chart
+    fullName: item.user_name || '—',
     value: view === 'total' 
       ? item.total_processed 
       : view === 'daily' 
