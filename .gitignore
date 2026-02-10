@@ -1,5 +1,8 @@
 # Environment files (contain credentials)
 backend/.env
+frontend/.env
+frontend/.env.production
+frontend/.env.local
 
 # Python
 backend/venv/

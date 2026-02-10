@@ -79,6 +79,13 @@ The build output is in `frontend/dist/`. The `public/data/` folder (with `metada
 
 5. Deploy. The site will serve the static assets; the dashboard will fetch `/data/metadata.json` and `/data/dashboard-data.json.gz` and decompress the latter in the browser.
 
+## Optional in-app password
+
+To show a password screen before the dashboard (when using static data), set **`VITE_DASHBOARD_PASSWORD`** at build time (e.g. in Vercel project **Environment Variables**). The app will show a simple unlock form; after a correct password, access is stored in the browser session and the dashboard is shown.
+
+- **When it applies:** Only when `VITE_STATIC_DATA=true` and `VITE_DASHBOARD_PASSWORD` is non-empty.
+- **Security:** This is client-side only. The password is embedded in the built JS; it protects casual access, not determined users. For stronger protection, use server-side auth or Vercel’s deployment protection if available.
+
 ## Summary
 
 | Step | Action |
