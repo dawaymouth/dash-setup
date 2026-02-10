@@ -460,13 +460,15 @@ export const fetchReceivedToOpenTime = async (
     const rawData = (staticData.organization?.cycle_time?.received_to_open?.data || []) as Array<{date: string, avg_minutes: number, count: number, supplier_id?: string}>;
     const filtered = filterBySupplier(rawData, staticData.currentSupplierId);
     const aggregated = aggregateCycleTimeByDate(filtered);
-    return {
+return {
       data: aggregated,
-      overall_avg_minutes: staticData.organization?.cycle_time?.received_to_open?.overall_avg_minutes ?? computeOverallAvg(aggregated),
+      overall_avg_minutes: staticData.currentSupplierId
+        ? computeOverallAvg(aggregated)
+        : (staticData.organization?.cycle_time?.received_to_open?.overall_avg_minutes ?? computeOverallAvg(aggregated)),
       metric_type: 'received_to_open'
     };
   }
-  
+
   const { data } = await api.get('/cycle-time/received-to-open', {
     params: buildParams(filters),
   });
@@ -485,13 +487,15 @@ export const fetchProcessingTime = async (filters: FilterState): Promise<CycleTi
     const rawData = (staticData.organization?.cycle_time?.processing?.data || []) as Array<{date: string, avg_minutes: number, count: number, supplier_id?: string}>;
     const filtered = filterBySupplier(rawData, staticData.currentSupplierId);
     const aggregated = aggregateCycleTimeByDate(filtered);
-    return {
+return {
       data: aggregated,
-      overall_avg_minutes: staticData.organization?.cycle_time?.processing?.overall_avg_minutes ?? computeOverallAvg(aggregated),
+      overall_avg_minutes: staticData.currentSupplierId
+        ? computeOverallAvg(aggregated)
+        : (staticData.organization?.cycle_time?.processing?.overall_avg_minutes ?? computeOverallAvg(aggregated)),
       metric_type: 'processing'
     };
   }
-  
+
   const { data } = await api.get('/cycle-time/processing', {
     params: buildParams(filters),
   });
