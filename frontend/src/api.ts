@@ -396,9 +396,15 @@ export const fetchPagesStats = async (filters: FilterState): Promise<PagesStatsR
     const orgPages = staticData.organization?.pages;
     if (supplierId && staticData.perSupplier?.[supplierId]?.pages) {
       const p = staticData.perSupplier[supplierId].pages;
-      return { total_documents: p?.total_documents ?? 0, total_pages: p?.total_pages ?? 0 };
+      const totalDocs = p?.total_documents ?? 0;
+      const totalPages = p?.total_pages ?? 0;
+      const avg = totalDocs > 0 ? totalPages / totalDocs : null;
+      return { total_documents: totalDocs, total_pages: totalPages, avg_pages_per_fax: p?.avg_pages_per_fax ?? avg };
     }
-    return { total_documents: orgPages?.total_documents ?? 0, total_pages: orgPages?.total_pages ?? 0 };
+    const totalDocs = orgPages?.total_documents ?? 0;
+    const totalPages = orgPages?.total_pages ?? 0;
+    const avg = totalDocs > 0 ? totalPages / totalDocs : null;
+    return { total_documents: totalDocs, total_pages: totalPages, avg_pages_per_fax: orgPages?.avg_pages_per_fax ?? avg };
   }
   
   const { data } = await api.get('/volume/pages', {
