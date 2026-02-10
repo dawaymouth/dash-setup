@@ -19,6 +19,9 @@ sys.path.insert(0, os.path.dirname(__file__))
 from app.database import execute_query
 from app import export_queries as eq
 
+ALL_ORGS_ID = "__all__"
+ALL_ORGS_NAME = "All Supplier Orgs"
+
 
 def is_retryable_redshift_error(exc: BaseException) -> bool:
     """True if the exception looks like a transient Redshift 'could not open relation' (XX000) error."""
@@ -219,6 +222,209 @@ def group_accuracy_data_by_org(rows):
         copy = {k: v for k, v in r.items() if k != "supplier_organization_id"}
         by_org[oid].append(copy)
     return by_org
+
+
+# ---------------------------------------------------------------------------
+# Merge helpers: aggregate *_by_org into single "all orgs" inputs
+# ---------------------------------------------------------------------------
+
+def _merge_volume_all(volume_by_org, org_ids):
+    """Flatten volume across orgs, aggregate by date (sum count). Returns list of { date, count }."""
+    from collections import defaultdict
+    by_date = defaultdict(int)
+    for oid in org_ids:
+        for row in volume_by_org.get(oid, []):
+            d = str(row.get("date") or "")
+            by_date[d] += int(row.get("count") or 0)
+    return [{"date": d, "count": c} for d, c in sorted(by_date.items())]
+
+
+def _merge_categories_all(categories_by_org, org_ids):
+    """Flatten categories across orgs, aggregate by category, recompute percentage."""
+    from collections import defaultdict
+    by_cat = defaultdict(int)
+    for oid in org_ids:
+        for row in categories_by_org.get(oid, []):
+            c = row.get("category") or "Uncategorized"
+            by_cat[c] += int(row.get("count") or 0)
+    total = sum(by_cat.values())
+    return [{"category": c, "count": cnt, "percentage": round(cnt * 100.0 / total, 2) if total > 0 else 0} for c, cnt in sorted(by_cat.items(), key=lambda x: -x[1])]
+
+
+def _merge_time_of_day_all(time_of_day_by_org, org_ids):
+    """Concatenate time_of_day lists across orgs."""
+    out = []
+    for oid in org_ids:
+        out.extend(time_of_day_by_org.get(oid, []))
+    return out
+
+
+def _merge_suppliers_all(suppliers_by_org, org_ids):
+    """Concatenate supplier lists, dedupe by supplier_id (keep first)."""
+    seen = {}
+    for oid in org_ids:
+        for s in suppliers_by_org.get(oid, []):
+            sid = s.get("supplier_id")
+            if sid is not None and sid not in seen:
+                seen[sid] = {"supplier_id": sid, "name": s.get("name"), "ai_intake_enabled": s.get("ai_intake_enabled")}
+    return list(seen.values())
+
+
+def _merge_pages_org_all(pages_org_by_org, org_ids):
+    """Sum total_documents and total_pages across orgs."""
+    total_docs = total_pages = 0
+    for oid in org_ids:
+        p = pages_org_by_org.get(oid)
+        if p:
+            total_docs += int(p.get("total_documents") or 0)
+            total_pages += int(p.get("total_pages") or 0)
+    return {"total_documents": total_docs, "total_pages": total_pages}
+
+
+def _merge_pages_by_supplier_all(pages_by_supplier_by_org, org_ids):
+    """Flatten pages-by-supplier, aggregate by supplier_id (sum)."""
+    from collections import defaultdict
+    by_sid = defaultdict(lambda: {"total_documents": 0, "total_pages": 0})
+    for oid in org_ids:
+        for row in pages_by_supplier_by_org.get(oid, []):
+            sid = row.get("supplier_id")
+            if sid is None:
+                continue
+            by_sid[sid]["total_documents"] += int(row.get("total_documents") or 0)
+            by_sid[sid]["total_pages"] += int(row.get("total_pages") or 0)
+    return [{"supplier_id": sid, "total_documents": v["total_documents"], "total_pages": v["total_pages"]} for sid, v in by_sid.items()]
+
+
+def _merge_doc_accuracy_all(doc_accuracy_by_org, org_ids):
+    """Flatten doc accuracy by supplier, aggregate by supplier_id; recompute accuracy_pct."""
+    from collections import defaultdict
+    by_sid = defaultdict(lambda: {"total_ai_docs": 0, "docs_with_edits": 0, "docs_no_edits": 0})
+    for oid in org_ids:
+        for row in doc_accuracy_by_org.get(oid, []):
+            sid = row.get("supplier_id")
+            if sid is None:
+                continue
+            by_sid[sid]["total_ai_docs"] += int(row.get("total_ai_docs") or 0)
+            by_sid[sid]["docs_with_edits"] += int(row.get("docs_with_edits") or 0)
+            by_sid[sid]["docs_no_edits"] += int(row.get("docs_no_edits") or 0)
+    out = []
+    for sid, v in by_sid.items():
+        total = v["total_ai_docs"]
+        pct = round(100.0 * v["docs_no_edits"] / total, 2) if total > 0 else 0
+        out.append({"supplier_id": sid, "total_ai_docs": total, "docs_with_edits": v["docs_with_edits"], "docs_no_edits": v["docs_no_edits"], "accuracy_pct": pct})
+    return out
+
+
+def _merge_cycle_data_all(cycle_data_by_org, org_ids):
+    """Flatten cycle data; return (data_list, overall_avg_minutes) with weighted average."""
+    data = []
+    for oid in org_ids:
+        data.extend(cycle_data_by_org.get(oid, []))
+    if not data:
+        return [], 0
+    total_count = 0
+    weighted_sum = 0
+    for row in data:
+        c = int(row.get("count") or 0)
+        avg = float(row.get("avg_minutes") or 0)
+        total_count += c
+        weighted_sum += avg * c
+    overall = weighted_sum / total_count if total_count > 0 else 0
+    return data, overall
+
+
+def _merge_cycle_state_all(cycle_state_by_org, org_ids):
+    """Sum state counts across orgs; build { data: [...], total } with labels and percentage."""
+    STATE_LABELS = eq.STATE_LABELS
+    by_state = {}
+    for oid in org_ids:
+        dist = cycle_state_by_org.get(oid)
+        if not dist:
+            continue
+        for item in (dist.get("data") or []):
+            st = item.get("state")
+            if st is not None:
+                by_state[st] = by_state.get(st, 0) + int(item.get("count") or 0)
+    total = sum(by_state.values())
+    data = [{"state": st, "label": STATE_LABELS.get(st, st.title() if st else ""), "count": c, "percentage": round(c * 100.0 / total, 2) if total > 0 else 0} for st, c in sorted(by_state.items(), key=lambda x: -x[1])]
+    return {"data": data, "total": total}
+
+
+def _merge_productivity_all(prod_by_org, org_ids):
+    """Flatten productivity list across orgs (simplest: no aggregation by user_id)."""
+    out = []
+    for oid in org_ids:
+        out.extend(prod_by_org.get(oid, []))
+    return out
+
+
+def _merge_acc_per_field_all(acc_per_field_by_org, org_ids):
+    """Aggregate per_field by (record_type, field_identifier): sum total_docs, accurate_docs; recompute accuracy_pct."""
+    from collections import defaultdict
+    key_to_counts = defaultdict(lambda: {"total_docs": 0, "accurate_docs": 0})
+    for oid in org_ids:
+        for row in acc_per_field_by_org.get(oid, []):
+            key = (row.get("record_type"), row.get("field_identifier"))
+            key_to_counts[key]["total_docs"] += int(row.get("total_docs") or 0)
+            key_to_counts[key]["accurate_docs"] += int(row.get("accurate_docs") or 0)
+    out = []
+    for (record_type, field_identifier), v in key_to_counts.items():
+        total = v["total_docs"]
+        pct = round(100.0 * v["accurate_docs"] / total, 2) if total > 0 else 0
+        out.append({"record_type": record_type, "field_identifier": field_identifier, "total_docs": total, "accurate_docs": v["accurate_docs"], "accuracy_pct": pct})
+    return out
+
+
+def _merge_acc_per_field_overall_all(acc_per_field_by_org, org_ids):
+    """Overall accuracy from merged per_field: sum accurate_docs / sum total_docs."""
+    total_docs = total_acc = 0
+    for oid in org_ids:
+        for row in acc_per_field_by_org.get(oid, []):
+            total_docs += int(row.get("total_docs") or 0)
+            total_acc += int(row.get("accurate_docs") or 0)
+    return round(100.0 * total_acc / total_docs, 2) if total_docs > 0 else 0
+
+
+def _merge_acc_doc_all(acc_doc_by_org, org_ids):
+    """Sum document-level totals across orgs; recompute accuracy_pct."""
+    total_ai = docs_edits = docs_no_edits = 0
+    for oid in org_ids:
+        d = acc_doc_by_org.get(oid)
+        if not d:
+            continue
+        total_ai += int(d.get("total_ai_docs") or 0)
+        docs_edits += int(d.get("docs_with_edits") or 0)
+        docs_no_edits += int(d.get("docs_no_edits") or 0)
+    pct = round(100.0 * docs_no_edits / total_ai, 2) if total_ai > 0 else 0
+    return {"total_ai_docs": total_ai, "docs_with_edits": docs_edits, "docs_no_edits": docs_no_edits, "accuracy_pct": pct}
+
+
+def _merge_acc_trend_all(acc_trend_by_org, org_ids):
+    """Aggregate trend by date: sum total_docs, docs_with_changes; recompute accuracy_pct per date."""
+    from collections import defaultdict
+    by_date = defaultdict(lambda: {"total_docs": 0, "docs_with_changes": 0})
+    for oid in org_ids:
+        for row in acc_trend_by_org.get(oid, []):
+            d = str(row.get("date") or "")
+            by_date[d]["total_docs"] += int(row.get("total_docs") or 0)
+            by_date[d]["docs_with_changes"] += int(row.get("docs_with_changes") or 0)
+    out = []
+    for d in sorted(by_date.keys()):
+        v = by_date[d]
+        total = v["total_docs"]
+        pct = round(100.0 * (total - v["docs_with_changes"]) / total, 2) if total > 0 else 0
+        out.append({"date": d, "total_docs": total, "docs_with_changes": v["docs_with_changes"], "accuracy_pct": pct})
+    return out
+
+
+def _merge_acc_trend_overall_all(acc_trend_by_org, org_ids):
+    """Overall trend accuracy: (sum total_docs - sum docs_with_changes) / sum total_docs."""
+    total_docs = total_changes = 0
+    for oid in org_ids:
+        for row in acc_trend_by_org.get(oid, []):
+            total_docs += int(row.get("total_docs") or 0)
+            total_changes += int(row.get("docs_with_changes") or 0)
+    return round(100.0 * (total_docs - total_changes) / total_docs, 2) if total_docs > 0 else 0
 
 
 def assemble_one_org_from_bulk(
@@ -485,6 +691,57 @@ def main():
             acc_field_trend_overall.get(oid, 0),
         )
 
+    # 3b. Assemble "All Supplier Orgs" slice (aggregated across all orgs)
+    print("  Assembling All Supplier Orgs...")
+    merged_volume = _merge_volume_all(volume_by_org, org_ids)
+    merged_categories = _merge_categories_all(categories_by_org, org_ids)
+    merged_time_of_day = _merge_time_of_day_all(time_of_day_by_org, org_ids)
+    merged_suppliers = _merge_suppliers_all(suppliers_by_org, org_ids)
+    merged_pages_org = _merge_pages_org_all(pages_org_by_org, org_ids)
+    merged_pages_by_supplier = _merge_pages_by_supplier_all(pages_by_supplier_by_org, org_ids)
+    merged_doc_accuracy = _merge_doc_accuracy_all(doc_accuracy_by_org, org_ids)
+    merged_cycle_recv_data, merged_cycle_recv_overall = _merge_cycle_data_all(cycle_recv_by_org, org_ids)
+    merged_cycle_proc_data, merged_cycle_proc_overall = _merge_cycle_data_all(cycle_proc_by_org, org_ids)
+    merged_cycle_state = _merge_cycle_state_all(cycle_state_by_org, org_ids)
+    merged_prod_by_ind = _merge_productivity_all(prod_by_ind_by_org, org_ids)
+    merged_prod_daily = _merge_productivity_all(prod_daily_by_org, org_ids)
+    merged_prod_proc_time = _merge_productivity_all(prod_proc_time_by_org, org_ids)
+    merged_prod_cat = _merge_productivity_all(prod_cat_by_org, org_ids)
+    merged_acc_per_field = _merge_acc_per_field_all(acc_per_field_by_org, org_ids)
+    merged_acc_per_field_overall = _merge_acc_per_field_overall_all(acc_per_field_by_org, org_ids)
+    merged_acc_doc = _merge_acc_doc_all(acc_doc_by_org, org_ids)
+    merged_acc_trend = _merge_acc_trend_all(acc_trend_by_org, org_ids)
+    merged_acc_trend_overall = _merge_acc_trend_overall_all(acc_trend_by_org, org_ids)
+    merged_acc_field_trend = _merge_acc_trend_all(acc_field_trend_by_org, org_ids)
+    merged_acc_field_trend_overall = _merge_acc_trend_overall_all(acc_field_trend_by_org, org_ids)
+
+    by_org[ALL_ORGS_ID] = assemble_one_org_from_bulk(
+        ALL_ORGS_ID, ALL_ORGS_NAME,
+        merged_volume,
+        merged_categories,
+        merged_time_of_day,
+        merged_suppliers,
+        merged_pages_org,
+        merged_pages_by_supplier,
+        merged_doc_accuracy,
+        merged_cycle_recv_data,
+        merged_cycle_recv_overall,
+        merged_cycle_proc_data,
+        merged_cycle_proc_overall,
+        merged_cycle_state,
+        merged_prod_by_ind,
+        merged_prod_daily,
+        merged_prod_proc_time,
+        merged_prod_cat,
+        merged_acc_per_field,
+        merged_acc_per_field_overall,
+        merged_acc_doc,
+        merged_acc_trend,
+        merged_acc_trend_overall,
+        merged_acc_field_trend,
+        merged_acc_field_trend_overall,
+    )
+
     if not by_org:
         print("No organization data exported.")
         sys.exit(1)
@@ -497,12 +754,16 @@ def main():
     total_faxes = 0
     org_list = []
     for oid, data in by_org.items():
+        if oid == ALL_ORGS_ID:
+            continue
         org_record = next((o for o in orgs if o["supplier_organization_id"] == oid), None)
         name = org_record["name"] if org_record else oid
         num_suppliers = len(data.get("suppliers", []))
         faxes = sum(row.get("count", 0) for row in data.get("organization", {}).get("volume_by_day", []))
         total_faxes += faxes
         org_list.append({"id": oid, "name": name, "num_suppliers": num_suppliers})
+    # Prepend "All Supplier Orgs" so it appears first (and can be default)
+    org_list.insert(0, {"id": ALL_ORGS_ID, "name": ALL_ORGS_NAME, "num_suppliers": len(merged_suppliers)})
 
     metadata = {
         "organizations": org_list,

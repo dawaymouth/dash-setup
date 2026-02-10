@@ -125,8 +125,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             </span>
           </div>
 
-          {/* Supplier Filter */}
-          {staticSuppliers.length > 1 && (
+          {/* Supplier Filter: always show for current org so "All suppliers" view is available */}
+          {Array.isArray(staticSuppliers) && (currentOrgId != null || orgList?.length <= 1) && (
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <label className="text-sm font-medium text-gray-700">Supplier:</label>
               <select
