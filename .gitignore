@@ -37,6 +37,9 @@ node_modules/
 # External dashboard builds
 external-builds/
 
+# Per-org external export data (not committed)
+external-exports/
+
 # frontend/public/data/ is committed for Vercel static deploy (run export locally, then commit)
 
 # IDE

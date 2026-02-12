@@ -380,10 +380,14 @@ export const fetchFaxVolumeTrend = async (
     const inRange = aggregated.filter((row) => row.date >= startStr && row.date <= endStr);
 
     // Aggregate daily data into weekly buckets (chart uses trend window from Range toggles)
+    // Exclude most recent week (incomplete) to match API: volume router filters date < DATE_TRUNC('week', CURRENT_DATE)
+    const weekOfEndDate = startOfWeek(new Date(endStr + 'T00:00:00'), { weekStartsOn: 1 });
+    const weekOfEndDateKey = format(weekOfEndDate, 'yyyy-MM-dd');
     const weeklyMap = new Map<string, number>();
     for (const row of inRange) {
       const weekStart = startOfWeek(new Date(row.date + 'T00:00:00'), { weekStartsOn: 1 });
       const weekKey = format(weekStart, 'yyyy-MM-dd');
+      if (weekKey === weekOfEndDateKey) continue; // skip incomplete week
       weeklyMap.set(weekKey, (weeklyMap.get(weekKey) || 0) + row.count);
     }
     const weeklyData = Array.from(weeklyMap.entries())
