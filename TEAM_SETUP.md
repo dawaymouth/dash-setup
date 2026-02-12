@@ -38,8 +38,8 @@ Before you begin, make sure you have:
 ### Step 1: Get the Code
 
 ```bash
-git clone https://github.com/dawaymouth/dash-setup.git ai-intake-dashboard
-cd ai-intake-dashboard
+git clone https://github.com/dawaymouth/dash-setup.git new-dash
+cd new-dash
 ```
 
 ### Step 2: Run Setup Script
@@ -327,11 +327,21 @@ git stash pop
    ./setup.sh
    ```
 
-### Python 3.14 Not Supported
+### pydantic-core Build Fails (ForwardRef / Python 3.13)
 
 **Symptom:** `ForwardRef._evaluate() missing 1 required keyword-only argument: 'recursive_guard'` or build errors with pydantic-core
 
-**Cause:** Python 3.14 changed internal APIs. pydantic-core does not support Python 3.14 yet.
+**Cause:** Old pydantic versions (2.5.x) use pydantic-core that doesn't support Python 3.13's API changes. The project requires pydantic>=2.9.2 for Python 3.13.
+
+**Solution:** Ensure you've pulled the latest code—requirements.txt now specifies pydantic>=2.9.2. If you still see this, delete venv and re-run:
+   ```bash
+   rm -rf backend/venv
+   ./setup.sh
+   ```
+
+### Python 3.14 Not Supported
+
+**Symptom:** Same ForwardRef error when using Python 3.14
 
 **Solution:** Install Python 3.13 and let the setup script use it:
    ```bash
