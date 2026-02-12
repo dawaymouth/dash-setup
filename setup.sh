@@ -76,6 +76,15 @@ else
     print_success "Node.js found (version $NODE_VERSION)"
 fi
 
+# Check for Rust (required for pydantic-core build on Python 3.13 - no pre-built wheels)
+if ! command -v cargo &> /dev/null; then
+    print_warning "Rust not found. Installing Rust (required for Python 3.13)..."
+    brew install rust
+    print_success "Rust installed"
+else
+    print_success "Rust found"
+fi
+
 # Setup Backend
 print_header "Setting up Backend"
 

@@ -295,23 +295,31 @@ git stash pop
 
 **Symptom:** `CERTIFICATE_VERIFY_FAILED` during setup, or errors involving `puccinialin`/`pydantic-core` build
 
-**Cause:** Python from python.org on macOS does not use system certificates by default.
+**Cause:** Python 3.13 has no pre-built wheels for pydantic-core on macOS, so pip builds from source. The build downloads Rust, which can fail due to SSL certificate issues on python.org's Python.
 
 **Solutions:**
 
-1. **Re-run setup** (the script now fixes certs automatically):
+1. **Re-run setup** (the script now installs Rust via Homebrew to avoid the download):
    ```bash
    rm -rf backend/venv
    ./setup.sh
    ```
+   If Rust is already installed, the script will detect it and skip installation.
 
-2. **Manual certificate fix** (if setup still fails):
+2. **Pre-install Rust manually** (if Homebrew install fails):
+   ```bash
+   brew install rust
+   rm -rf backend/venv
+   ./setup.sh
+   ```
+
+3. **Manual certificate fix** (alternative—fixes system Python SSL):
    ```bash
    open "/Applications/Python 3.13/Install Certificates.command"
    ```
    (Adjust the version in the path if you use a different Python version.) Then retry `./setup.sh`.
 
-3. **Use Homebrew Python** (handles certificates better):
+4. **Use Homebrew Python** (handles certificates better):
    ```bash
    brew install python@3.13
    # Ensure python3 points to Homebrew: brew link python@3.13
