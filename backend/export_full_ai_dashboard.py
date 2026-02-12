@@ -39,6 +39,7 @@ def list_ai_intake_organizations():
             COUNT(*) as total_faxes
         FROM analytics.intake_documents id
         WHERE id.supplier_organization_id IS NOT NULL
+          AND LOWER(TRIM(id.supplier_organization)) != 'archive org'
         GROUP BY id.supplier_organization_id, id.supplier_organization
         HAVING MAX(CASE WHEN id.is_ai_intake_enabled = true THEN 1 ELSE 0 END) = 1
         ORDER BY name
@@ -196,6 +197,64 @@ def group_cycle_state_distribution_by_org(rows):
     return result
 
 
+def group_cycle_state_distribution_by_supplier(rows):
+    """Group state distribution bulk rows by (org_id, supplier_id). Returns { oid: { sid: { data, total } } }."""
+    STATE_LABELS = eq.STATE_LABELS
+    by_org_supplier = {}
+    for r in rows:
+        oid = r.get("supplier_organization_id")
+        sid = r.get("supplier_id")
+        if oid is None or sid is None:
+            continue
+        st = r["state"]
+        cnt = r["count"]
+        if oid not in by_org_supplier:
+            by_org_supplier[oid] = {}
+        if sid not in by_org_supplier[oid]:
+            by_org_supplier[oid][sid] = {}
+        by_org_supplier[oid][sid][st] = by_org_supplier[oid][sid].get(st, 0) + cnt
+    result = {}
+    for oid, by_supplier in by_org_supplier.items():
+        result[oid] = {}
+        for sid, state_totals in by_supplier.items():
+            total = sum(state_totals.values())
+            data = [{"state": st, "label": STATE_LABELS.get(st, st.title()), "count": c, "percentage": round(c * 100.0 / total, 2) if total > 0 else 0} for st, c in sorted(state_totals.items(), key=lambda x: -x[1])]
+            result[oid][sid] = {"data": data, "total": total}
+    return result
+
+
+def group_cycle_state_distribution_by_user(rows):
+    """Group state distribution by-user bulk rows by (org_id, user_id). Returns { oid: { user_id: { data, total } } }.
+    data items include supplier_id for frontend filterBySupplier."""
+    STATE_LABELS = eq.STATE_LABELS
+    by_org_user = {}
+    for r in rows:
+        oid = r.get("supplier_organization_id")
+        uid = r.get("user_id")
+        if oid is None or uid is None:
+            continue
+        st = r["state"]
+        sid = r.get("supplier_id")
+        cnt = r["count"]
+        if oid not in by_org_user:
+            by_org_user[oid] = {}
+        if uid not in by_org_user[oid]:
+            by_org_user[oid][uid] = {}  # (state, supplier_id) -> count
+        key = (st, sid)
+        by_org_user[oid][uid][key] = by_org_user[oid][uid].get(key, 0) + cnt
+    result = {}
+    for oid, by_user in by_org_user.items():
+        result[oid] = {}
+        for uid, state_supplier_totals in by_user.items():
+            total = sum(state_supplier_totals.values())
+            data = [
+                {"state": st, "label": STATE_LABELS.get(st, st.title()), "count": c, "percentage": round(c * 100.0 / total, 2) if total > 0 else 0, "supplier_id": sid}
+                for (st, sid), c in sorted(state_supplier_totals.items(), key=lambda x: -x[1])
+            ]
+            result[oid][uid] = {"data": data, "total": total}
+    return result
+
+
 def group_productivity_by_org(rows):
     """Group productivity bulk rows (with supplier_organization_id) into by_org[oid] = list of dicts (omit org_id in each row)."""
     by_org = {}
@@ -350,6 +409,32 @@ def _merge_cycle_state_all(cycle_state_by_org, org_ids):
     return {"data": data, "total": total}
 
 
+def _merge_cycle_state_by_user_all(cycle_state_by_user_by_org, org_ids):
+    """Merge per-user state distribution across orgs. Returns { user_id: { data: [...], total } }."""
+    STATE_LABELS = eq.STATE_LABELS
+    merged_by_user = {}
+    for oid in org_ids:
+        by_user = cycle_state_by_user_by_org.get(oid) or {}
+        for uid, dist in by_user.items():
+            if uid not in merged_by_user:
+                merged_by_user[uid] = {}  # (state, supplier_id) -> count
+            for item in (dist.get("data") or []):
+                st = item.get("state")
+                sid = item.get("supplier_id")
+                cnt = int(item.get("count") or 0)
+                key = (st, sid)
+                merged_by_user[uid][key] = merged_by_user[uid].get(key, 0) + cnt
+    result = {}
+    for uid, state_supplier_totals in merged_by_user.items():
+        total = sum(state_supplier_totals.values())
+        data = [
+            {"state": st, "label": STATE_LABELS.get(st, st.title()), "count": c, "percentage": round(c * 100.0 / total, 2) if total > 0 else 0, "supplier_id": sid}
+            for (st, sid), c in sorted(state_supplier_totals.items(), key=lambda x: -x[1])
+        ]
+        result[uid] = {"data": data, "total": total}
+    return result
+
+
 def _merge_productivity_all(prod_by_org, org_ids):
     """Flatten productivity list across orgs (simplest: no aggregation by user_id)."""
     out = []
@@ -432,6 +517,8 @@ def assemble_one_org_from_bulk(
     volume_list, categories_list, time_of_day_list,
     suppliers_list, pages_org, pages_by_supplier_list, doc_accuracy_list,
     cycle_recv_data, cycle_recv_overall, cycle_proc_data, cycle_proc_overall, cycle_state_dist,
+    cycle_state_by_supplier,
+    cycle_state_by_user,
     prod_by_ind, prod_daily, prod_proc_time, prod_cat,
     acc_per_field_list, acc_per_field_overall, acc_doc_org, acc_trend_list, acc_trend_overall, acc_field_trend_list, acc_field_trend_overall,
 ):
@@ -450,6 +537,9 @@ def assemble_one_org_from_bulk(
         if sid not in per_supplier:
             per_supplier[sid] = {"pages": {}, "document_accuracy": {}}
 
+    for sid in per_supplier:
+        per_supplier[sid]["state_distribution"] = (cycle_state_by_supplier or {}).get(sid, {"data": [], "total": 0})
+
     cycle_time = {
         "received_to_open": {"data": cycle_recv_data or [], "overall_avg_minutes": cycle_recv_overall or 0, "metric_type": "received_to_open"},
         "processing": {"data": cycle_proc_data or [], "overall_avg_minutes": cycle_proc_overall or 0, "metric_type": "processing"},
@@ -460,6 +550,7 @@ def assemble_one_org_from_bulk(
         "daily_average": {"data": prod_daily or []},
         "by_individual_processing_time": {"data": prod_proc_time or []},
         "category_breakdown": {"data": prod_cat or []},
+        "state_distribution_by_user": cycle_state_by_user or {},
     }
     acc_per_field_list = acc_per_field_list or []
     accuracy = {
@@ -614,8 +705,13 @@ def main():
     print(f"Found {len(orgs)} AI intake organizations.")
 
     # 2. Bulk phase: all queries (no per-org DB)
+    # Trend data uses extended range (up to 365 days) so trend charts can show 30d–1yr
+    TREND_WINDOW_DAYS = 365
+    trend_start = min(start_date, end_date - timedelta(days=TREND_WINDOW_DAYS))
+    trend_end = end_date
+
     print("\nBulk queries (all metrics)...")
-    volume_rows = eq.query_volume_by_day_bulk(start_date, end_date, org_ids)
+    volume_rows = eq.query_volume_by_day_bulk(trend_start, trend_end, org_ids)
     categories_rows = eq.query_categories_bulk(start_date, end_date, org_ids)
     time_of_day_rows = eq.query_time_of_day_bulk(start_date, end_date, org_ids)
     suppliers_rows = eq.query_suppliers_bulk(org_ids)
@@ -625,14 +721,15 @@ def main():
     cycle_recv_data, cycle_recv_overall = eq.query_cycle_received_to_open_bulk(start_date, end_date, org_ids)
     cycle_proc_data, cycle_proc_overall = eq.query_cycle_processing_bulk(start_date, end_date, org_ids)
     cycle_state_rows = eq.query_cycle_state_distribution_bulk(start_date, end_date, org_ids)
+    cycle_state_by_user_rows = eq.query_cycle_state_distribution_by_user_bulk(start_date, end_date, org_ids)
     prod_by_ind_rows = eq.query_productivity_by_individual_bulk(start_date, end_date, org_ids)
     prod_daily_rows = eq.query_productivity_daily_average_bulk(start_date, end_date, org_ids)
     prod_proc_time_rows = eq.query_productivity_by_individual_processing_time_bulk(start_date, end_date, org_ids)
     prod_cat_rows = eq.query_productivity_category_breakdown_bulk(start_date, end_date, org_ids)
     acc_per_field_data, acc_per_field_overall = eq.query_accuracy_per_field_bulk(start_date, end_date, org_ids)
     acc_doc_rows = eq.query_accuracy_document_level_org_bulk(start_date, end_date, org_ids)
-    acc_trend_data, acc_trend_overall = eq.query_accuracy_trend_bulk(start_date, end_date, org_ids, "week")
-    acc_field_trend_data, acc_field_trend_overall = eq.query_accuracy_field_level_trend_bulk(start_date, end_date, org_ids, "week")
+    acc_trend_data, acc_trend_overall = eq.query_accuracy_trend_bulk(trend_start, trend_end, org_ids, "week")
+    acc_field_trend_data, acc_field_trend_overall = eq.query_accuracy_field_level_trend_bulk(trend_start, trend_end, org_ids, "week")
     print("  Queries done. Grouping by org...")
 
     volume_by_org = group_volume_by_org(volume_rows)
@@ -645,6 +742,8 @@ def main():
     cycle_recv_by_org = group_cycle_data_by_org(cycle_recv_data)
     cycle_proc_by_org = group_cycle_data_by_org(cycle_proc_data)
     cycle_state_by_org = group_cycle_state_distribution_by_org(cycle_state_rows)
+    cycle_state_by_supplier_by_org = group_cycle_state_distribution_by_supplier(cycle_state_rows)
+    cycle_state_by_user_by_org = group_cycle_state_distribution_by_user(cycle_state_by_user_rows)
     prod_by_ind_by_org = group_productivity_by_org(prod_by_ind_rows)
     prod_daily_by_org = group_productivity_by_org(prod_daily_rows)
     prod_proc_time_by_org = group_productivity_by_org(prod_proc_time_rows)
@@ -678,6 +777,8 @@ def main():
             cycle_proc_by_org.get(oid, []),
             cycle_proc_overall.get(oid, 0),
             cycle_state_by_org.get(oid, {"data": [], "total": 0}),
+            cycle_state_by_supplier_by_org.get(oid, {}),
+            cycle_state_by_user_by_org.get(oid, {}),
             prod_by_ind_by_org.get(oid, []),
             prod_daily_by_org.get(oid, []),
             prod_proc_time_by_org.get(oid, []),
@@ -703,6 +804,7 @@ def main():
     merged_cycle_recv_data, merged_cycle_recv_overall = _merge_cycle_data_all(cycle_recv_by_org, org_ids)
     merged_cycle_proc_data, merged_cycle_proc_overall = _merge_cycle_data_all(cycle_proc_by_org, org_ids)
     merged_cycle_state = _merge_cycle_state_all(cycle_state_by_org, org_ids)
+    merged_cycle_state_by_user = _merge_cycle_state_by_user_all(cycle_state_by_user_by_org, org_ids)
     merged_prod_by_ind = _merge_productivity_all(prod_by_ind_by_org, org_ids)
     merged_prod_daily = _merge_productivity_all(prod_daily_by_org, org_ids)
     merged_prod_proc_time = _merge_productivity_all(prod_proc_time_by_org, org_ids)
@@ -729,6 +831,8 @@ def main():
         merged_cycle_proc_data,
         merged_cycle_proc_overall,
         merged_cycle_state,
+        {},  # no per-supplier for "All Supplier Orgs"
+        merged_cycle_state_by_user,
         merged_prod_by_ind,
         merged_prod_daily,
         merged_prod_proc_time,
@@ -759,7 +863,12 @@ def main():
         org_record = next((o for o in orgs if o["supplier_organization_id"] == oid), None)
         name = org_record["name"] if org_record else oid
         num_suppliers = len(data.get("suppliers", []))
-        faxes = sum(row.get("count", 0) for row in data.get("organization", {}).get("volume_by_day", []))
+        # Total faxes = main range only (volume_by_day may contain extended trend data)
+        volume_rows_main = [
+            r for r in data.get("organization", {}).get("volume_by_day", [])
+            if str(start_date) <= str(r.get("date", "")) <= str(end_date)
+        ]
+        faxes = sum(row.get("count", 0) for row in volume_rows_main)
         total_faxes += faxes
         org_list.append({"id": oid, "name": name, "num_suppliers": num_suppliers})
     # Prepend "All Supplier Orgs" so it appears first (and can be default)

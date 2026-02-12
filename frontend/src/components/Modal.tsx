@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ModalProps {
   isOpen: boolean;
@@ -41,7 +42,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 animate-fadeIn"
       onClick={onClose}
@@ -96,4 +97,7 @@ export const Modal: React.FC<ModalProps> = ({
       </div>
     </div>
   );
+
+  // Portal to document.body so the modal is never clipped by parent overflow/transform (e.g. full dashboard layout)
+  return createPortal(modalContent, document.body);
 };

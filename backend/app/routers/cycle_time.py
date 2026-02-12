@@ -1,176 +1,21 @@
 """
 Cycle time metrics API endpoints.
 """
+import logging
 from datetime import date, timedelta
 from fastapi import APIRouter, Query
 from typing import Optional
 
+logger = logging.getLogger(__name__)
+
+from app.cycle_time_sql import (
+    build_received_to_open_business_hours_query,
+    build_received_to_open_business_hours_overall_query,
+)
 from app.database import execute_query
 from app.models import CycleTimeByDate, CycleTimeResponse, StateDistributionItem, StateDistributionResponse
 
 router = APIRouter()
-
-
-# ---------------------------------------------------------------------------
-# Business hours helpers (8 AM – 6 PM, Mon–Fri = 600 business minutes/day)
-# ---------------------------------------------------------------------------
-
-def _clip_start_sql() -> str:
-    """SQL expression that clips document_created_at forward to the next
-    business-hour boundary (Mon-Fri 8am-6pm)."""
-    return """
-        CASE
-            -- Sunday -> next Monday 8am
-            WHEN EXTRACT(DOW FROM document_created_at) = 0 THEN
-                DATE_TRUNC('day', document_created_at) + INTERVAL '1 day' + INTERVAL '8 hours'
-            -- Saturday -> next Monday 8am
-            WHEN EXTRACT(DOW FROM document_created_at) = 6 THEN
-                DATE_TRUNC('day', document_created_at) + INTERVAL '2 days' + INTERVAL '8 hours'
-            -- Friday after 6pm -> next Monday 8am
-            WHEN EXTRACT(DOW FROM document_created_at) = 5
-                 AND EXTRACT(HOUR FROM document_created_at) >= 18 THEN
-                DATE_TRUNC('day', document_created_at) + INTERVAL '3 days' + INTERVAL '8 hours'
-            -- Other weekday after 6pm -> next day 8am
-            WHEN EXTRACT(HOUR FROM document_created_at) >= 18 THEN
-                DATE_TRUNC('day', document_created_at) + INTERVAL '1 day' + INTERVAL '8 hours'
-            -- Before 8am -> same day 8am
-            WHEN EXTRACT(HOUR FROM document_created_at) < 8 THEN
-                DATE_TRUNC('day', document_created_at) + INTERVAL '8 hours'
-            -- During business hours: keep as-is
-            ELSE document_created_at
-        END"""
-
-
-def _clip_end_sql() -> str:
-    """SQL expression that clips document_first_accessed_at backward to the
-    most recent business-hour boundary (Mon-Fri 8am-6pm)."""
-    return """
-        CASE
-            -- Sunday -> previous Friday 6pm
-            WHEN EXTRACT(DOW FROM document_first_accessed_at) = 0 THEN
-                DATE_TRUNC('day', document_first_accessed_at) - INTERVAL '2 days' + INTERVAL '18 hours'
-            -- Saturday -> previous Friday 6pm
-            WHEN EXTRACT(DOW FROM document_first_accessed_at) = 6 THEN
-                DATE_TRUNC('day', document_first_accessed_at) - INTERVAL '1 day' + INTERVAL '18 hours'
-            -- Monday before 8am -> previous Friday 6pm
-            WHEN EXTRACT(DOW FROM document_first_accessed_at) = 1
-                 AND EXTRACT(HOUR FROM document_first_accessed_at) < 8 THEN
-                DATE_TRUNC('day', document_first_accessed_at) - INTERVAL '3 days' + INTERVAL '18 hours'
-            -- Other weekday before 8am -> previous day 6pm
-            WHEN EXTRACT(HOUR FROM document_first_accessed_at) < 8 THEN
-                DATE_TRUNC('day', document_first_accessed_at) - INTERVAL '1 day' + INTERVAL '18 hours'
-            -- After 6pm -> same day 6pm
-            WHEN EXTRACT(HOUR FROM document_first_accessed_at) >= 18 THEN
-                DATE_TRUNC('day', document_first_accessed_at) + INTERVAL '18 hours'
-            -- During business hours: keep as-is
-            ELSE document_first_accessed_at
-        END"""
-
-
-def _business_minutes_sql() -> str:
-    """SQL expression that computes business minutes between the already-
-    clipped biz_start and biz_end columns.
-
-    Algorithm
-    ---------
-    * Same day  -> simple DATEDIFF.
-    * Different days ->
-        partial start day  (biz_start to 6 pm)
-      + partial end day    (8 am to biz_end)
-      + full weekdays between start & end dates (exclusive) × 600 min.
-
-    The weekday-count formula uses:
-        gap          = calendar days strictly between the two dates
-        full_weeks   = gap / 7          (integer division)
-        partial      = gap % 7
-        weekend_days = GREATEST(0, LEAST(partial - 5 + DOW(start), 2))
-        weekdays     = full_weeks * 5 + partial - weekend_days
-    where DOW follows Redshift convention (1=Mon … 5=Fri for clipped dates).
-    """
-    return """
-        CASE
-            WHEN biz_start >= biz_end THEN 0
-            WHEN biz_start::date = biz_end::date THEN
-                DATEDIFF(minute, biz_start, biz_end)
-            ELSE
-                -- Partial start day: biz_start -> 6 pm
-                DATEDIFF(minute, biz_start,
-                         DATE_TRUNC('day', biz_start) + INTERVAL '18 hours')
-                -- Partial end day: 8 am -> biz_end
-                + DATEDIFF(minute,
-                           DATE_TRUNC('day', biz_end) + INTERVAL '8 hours',
-                           biz_end)
-                -- Full weekdays in between × 600 minutes each
-                + (CASE
-                    WHEN DATEDIFF(day, biz_start::date, biz_end::date) <= 1 THEN 0
-                    ELSE (
-                        (DATEDIFF(day, biz_start::date, biz_end::date) - 1) / 7 * 5
-                        + MOD(DATEDIFF(day, biz_start::date, biz_end::date) - 1, 7)
-                        - GREATEST(0, LEAST(
-                            MOD(DATEDIFF(day, biz_start::date, biz_end::date) - 1, 7)
-                            - 5 + EXTRACT(DOW FROM biz_start),
-                            2))
-                    )
-                  END) * 600
-        END"""
-
-
-def _build_business_hours_query(where_sql: str) -> str:
-    """Grouped query: median business-minutes per day per supplier."""
-    return f"""
-        WITH clipped AS (
-            SELECT
-                document_created_at,
-                document_first_accessed_at,
-                supplier_id,
-                {_clip_start_sql()} AS biz_start,
-                {_clip_end_sql()} AS biz_end
-            FROM analytics.intake_documents
-            WHERE {where_sql}
-        ),
-        biz AS (
-            SELECT
-                document_created_at,
-                supplier_id,
-                {_business_minutes_sql()} AS biz_mins
-            FROM clipped
-        )
-        SELECT
-            DATE_TRUNC('day', document_created_at)::date AS date,
-            supplier_id,
-            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY biz_mins) AS avg_minutes,
-            COUNT(*) AS count
-        FROM biz
-        WHERE biz_mins > 0
-          AND biz_mins < 6000  -- exclude outliers > ~2 business weeks
-        GROUP BY 1, 2
-        ORDER BY 1, 2
-    """
-
-
-def _build_business_hours_overall_query(where_sql: str) -> str:
-    """Scalar query: overall median business-minutes across all documents."""
-    return f"""
-        WITH clipped AS (
-            SELECT
-                document_created_at,
-                document_first_accessed_at,
-                {_clip_start_sql()} AS biz_start,
-                {_clip_end_sql()} AS biz_end
-            FROM analytics.intake_documents
-            WHERE {where_sql}
-        ),
-        biz AS (
-            SELECT
-                {_business_minutes_sql()} AS biz_mins
-            FROM clipped
-        )
-        SELECT
-            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY biz_mins) AS median_minutes
-        FROM biz
-        WHERE biz_mins > 0
-          AND biz_mins < 6000
-    """
 
 
 # ---------------------------------------------------------------------------
@@ -221,7 +66,7 @@ async def get_received_to_open_time(
     
     # ---- Grouped query (per day / supplier) ----
     if exclude_non_business_hours:
-        query = _build_business_hours_query(where_sql)
+        query = build_received_to_open_business_hours_query(where_sql)
     else:
         time_calc = "DATEDIFF(minute, document_created_at, document_first_accessed_at)"
         query = f"""
@@ -252,7 +97,7 @@ async def get_received_to_open_time(
     
     # ---- Overall median (across all documents, not weighted from groups) ----
     if exclude_non_business_hours:
-        overall_query = _build_business_hours_overall_query(where_sql)
+        overall_query = build_received_to_open_business_hours_overall_query(where_sql)
     else:
         time_calc = "DATEDIFF(minute, document_created_at, document_first_accessed_at)"
         overall_query = f"""
@@ -375,8 +220,11 @@ async def get_processing_time(
 
 STATE_LABELS = {
     "assigned": "Assigned",
+    "assigned_other": "Assigned (other)",
+    "attached_to_existing": "Attached to existing order",
     "discarded": "Discarded",
     "emailed": "Emailed",
+    "generated_new": "Generated new order",
     "pushed": "Pushed",
     "split": "Split",
 }
@@ -391,12 +239,16 @@ async def get_state_distribution(
     ai_intake_only: bool = Query(False, description="Filter to AI intake enabled suppliers only"),
     supplier_id: Optional[str] = Query(None, description="Filter by specific supplier"),
     supplier_organization_id: Optional[str] = Query(None, description="Filter by supplier organization"),
+    assignee_id: Optional[str] = Query(None, description="Filter to documents completed by this user (last accessor)"),
 ):
     """
     Get distribution of documents across terminal states.
     
     The 'split' and 'splitting' states are combined into a single 'Split' category.
+    'Assigned' is split into Attached to existing order, Generated new order, and Assigned (other)
+    using is_document_attached_to_existing_dme_order and is_document_generated_new_dme_order.
     Returns count and percentage for each state.
+    When assignee_id is set, only documents whose last accessor (workflow) is that user are included.
     """
     
     # Default date range: last 30 days
@@ -405,36 +257,153 @@ async def get_state_distribution(
     if not start_date:
         start_date = end_date - timedelta(days=30)
     
-    # Build WHERE clauses
+    # Build WHERE clauses (for intake_documents columns)
     where_clauses = [
-        f"document_created_at >= '{start_date}'",
-        f"document_created_at < '{end_date + timedelta(days=1)}'",
-        f"state IN ({','.join(repr(s) for s in INCLUDED_STATES)})",
+        f"d.document_created_at >= '{start_date}'",
+        f"d.document_created_at < '{end_date + timedelta(days=1)}'",
+        f"d.state IN ({','.join(repr(s) for s in INCLUDED_STATES)})",
     ]
     
     if ai_intake_only:
-        where_clauses.append("is_ai_intake_enabled = true")
+        where_clauses.append("d.is_ai_intake_enabled = true")
     
     if supplier_id:
-        where_clauses.append(f"supplier_id = '{supplier_id}'")
+        where_clauses.append(f"d.supplier_id = '{supplier_id}'")
     
     if supplier_organization_id:
-        where_clauses.append(f"supplier_organization_id = '{supplier_organization_id}'")
+        where_clauses.append(f"d.supplier_organization_id = '{supplier_organization_id}'")
     
     where_sql = " AND ".join(where_clauses)
     
-    query = f"""
-        SELECT
-            CASE WHEN state IN ('split', 'splitting') THEN 'split' ELSE state END AS state,
-            supplier_id,
-            COUNT(*) AS count
-        FROM analytics.intake_documents
-        WHERE {where_sql}
-        GROUP BY 1, 2
-        ORDER BY 3 DESC
+    derived_state_sql = """
+        CASE
+            WHEN state = 'assigned' AND is_document_attached_to_existing_dme_order = true THEN 'attached_to_existing'
+            WHEN state = 'assigned' AND is_document_generated_new_dme_order = true THEN 'generated_new'
+            WHEN state = 'assigned' THEN 'assigned_other'
+            WHEN state IN ('split', 'splitting') THEN 'split'
+            ELSE state
+        END
     """
-    
-    results = execute_query(query)
+    derived_state_sql_fallback = "CASE WHEN state IN ('split', 'splitting') THEN 'split' ELSE state END"
+
+    if assignee_id:
+        # Restrict to documents where the last accessor (workflow) is this user.
+        # Narrow last_access to states this user has accessed (reduces window scope).
+        query = f"""
+            WITH states_for_user AS (
+                SELECT DISTINCT a.csr_inbox_state_id
+                FROM workflow.csr_inbox_state_accesses a
+                JOIN workflow.users u ON a.user_id = u.id
+                WHERE u.external_id = '{assignee_id}'
+            ),
+            last_access AS (
+                SELECT
+                    a.csr_inbox_state_id,
+                    u.external_id AS user_external_id,
+                    ROW_NUMBER() OVER (PARTITION BY a.csr_inbox_state_id ORDER BY a.last_accessed_at DESC) AS rn
+                FROM workflow.csr_inbox_state_accesses a
+                JOIN workflow.users u ON a.user_id = u.id
+                WHERE a.csr_inbox_state_id IN (SELECT csr_inbox_state_id FROM states_for_user)
+            ),
+            doc_user AS (
+                SELECT
+                    d.state,
+                    d.supplier_id,
+                    d.is_document_attached_to_existing_dme_order,
+                    d.is_document_generated_new_dme_order
+                FROM analytics.intake_documents d
+                JOIN workflow.csr_inbox_states s ON d.intake_document_id = s.external_id
+                JOIN last_access la ON s.id = la.csr_inbox_state_id AND la.rn = 1
+                WHERE la.user_external_id = '{assignee_id}'
+                  AND {where_sql}
+            )
+            SELECT
+                {derived_state_sql} AS state,
+                supplier_id,
+                COUNT(*) AS count
+            FROM doc_user
+            GROUP BY 1, 2
+            ORDER BY 3 DESC
+        """
+        query_fallback_assignee = f"""
+            WITH states_for_user AS (
+                SELECT DISTINCT a.csr_inbox_state_id
+                FROM workflow.csr_inbox_state_accesses a
+                JOIN workflow.users u ON a.user_id = u.id
+                WHERE u.external_id = '{assignee_id}'
+            ),
+            last_access AS (
+                SELECT
+                    a.csr_inbox_state_id,
+                    u.external_id AS user_external_id,
+                    ROW_NUMBER() OVER (PARTITION BY a.csr_inbox_state_id ORDER BY a.last_accessed_at DESC) AS rn
+                FROM workflow.csr_inbox_state_accesses a
+                JOIN workflow.users u ON a.user_id = u.id
+                WHERE a.csr_inbox_state_id IN (SELECT csr_inbox_state_id FROM states_for_user)
+            ),
+            doc_user AS (
+                SELECT d.state, d.supplier_id
+                FROM analytics.intake_documents d
+                JOIN workflow.csr_inbox_states s ON d.intake_document_id = s.external_id
+                JOIN last_access la ON s.id = la.csr_inbox_state_id AND la.rn = 1
+                WHERE la.user_external_id = '{assignee_id}'
+                  AND {where_sql}
+            )
+            SELECT
+                {derived_state_sql_fallback} AS state,
+                supplier_id,
+                COUNT(*) AS count
+            FROM doc_user
+            GROUP BY 1, 2
+            ORDER BY 3 DESC
+        """
+    else:
+        # Original: no user filter (use d. prefix only for consistency we use same where_clauses but without d. for the non-assignee path)
+        base_where = " AND ".join([
+            f"document_created_at >= '{start_date}'",
+            f"document_created_at < '{end_date + timedelta(days=1)}'",
+            f"state IN ({','.join(repr(s) for s in INCLUDED_STATES)})",
+        ] + (["is_ai_intake_enabled = true"] if ai_intake_only else [])
+          + ([f"supplier_id = '{supplier_id}'"] if supplier_id else [])
+          + ([f"supplier_organization_id = '{supplier_organization_id}'"] if supplier_organization_id else []))
+        query = f"""
+            SELECT
+                {derived_state_sql} AS state,
+                supplier_id,
+                COUNT(*) AS count
+            FROM analytics.intake_documents
+            WHERE {base_where}
+            GROUP BY 1, 2
+            ORDER BY 3 DESC
+        """
+        query_fallback_assignee = None
+
+    try:
+        results = execute_query(query)
+    except Exception as e:
+        err_msg = str(e).lower()
+        if "column" in err_msg and ("does not exist" in err_msg or "not found" in err_msg):
+            logger.warning(
+                "State distribution: using fallback (is_document_attached_to_existing_dme_order / is_document_generated_new_dme_order not in Redshift). "
+                "Document Outcomes will show a single Assigned bar until these columns exist."
+            )
+            query_fallback = query_fallback_assignee if assignee_id else f"""
+                SELECT
+                    CASE WHEN state IN ('split', 'splitting') THEN 'split' ELSE state END AS state,
+                    supplier_id,
+                    COUNT(*) AS count
+                FROM analytics.intake_documents
+                WHERE document_created_at >= '{start_date}' AND document_created_at < '{end_date + timedelta(days=1)}'
+                  AND state IN ({','.join(repr(s) for s in INCLUDED_STATES)})
+                  {" AND is_ai_intake_enabled = true" if ai_intake_only else ""}
+                  {f" AND supplier_id = '{supplier_id}'" if supplier_id else ""}
+                  {f" AND supplier_organization_id = '{supplier_organization_id}'" if supplier_organization_id else ""}
+                GROUP BY 1, 2
+                ORDER BY 3 DESC
+            """
+            results = execute_query(query_fallback)
+        else:
+            raise
     
     # Aggregate across suppliers to get totals per state
     state_totals: dict[str, int] = {}

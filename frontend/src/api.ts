@@ -21,6 +21,8 @@ import { decompressSync } from 'fflate';
 
 // Check if running in static data mode
 const STATIC_MODE = import.meta.env.VITE_STATIC_DATA === 'true';
+// External builds never deploy .gz; skip .gz to avoid using a cached old file
+const EXTERNAL_SHARING = import.meta.env.VITE_EXTERNAL_SHARING === 'true';
 
 const api = axios.create({
   baseURL: '/api',
@@ -64,14 +66,24 @@ function applyStaticOrg(orgId: string) {
 }
 
 async function fetchDashboardJson(): Promise<any> {
-  const gzUrl = '/data/dashboard-data.json.gz';
   const jsonUrl = '/data/dashboard-data.json';
-  const gzRes = await fetch(gzUrl);
-  if (gzRes.ok) {
-    const buf = await gzRes.arrayBuffer();
-    const decompressed = decompressSync(new Uint8Array(buf));
-    const str = new TextDecoder().decode(decompressed);
-    return JSON.parse(str);
+  // External builds never deploy .gz; skip .gz so we don't use a cached old .gz from a previous deploy
+  if (!EXTERNAL_SHARING) {
+    const gzUrl = '/data/dashboard-data.json.gz';
+    const gzRes = await fetch(gzUrl);
+    if (gzRes.ok) {
+      const buf = await gzRes.arrayBuffer();
+      const u8 = new Uint8Array(buf);
+      if (u8.length >= 2 && u8[0] === 0x1f && u8[1] === 0x8b) {
+        try {
+          const decompressed = decompressSync(u8);
+          const str = new TextDecoder().decode(decompressed);
+          return JSON.parse(str);
+        } catch (_) {
+          /* invalid gzip, fall through to .json */
+        }
+      }
+    }
   }
   const jsonRes = await fetch(jsonUrl);
   if (!jsonRes.ok) throw new Error('Missing dashboard data (tried .gz and .json)');
@@ -93,13 +105,20 @@ async function loadStaticData() {
     if (dashboardData.by_org) {
       staticData.fullPayload = dashboardData;
       const orgs = metadata?.organizations || [];
+      const singleOrgId = metadata?.supplier_organization?.id; // external/single-org metadata
       const savedOrgId = typeof localStorage !== 'undefined' ? localStorage.getItem('staticDashboardOrgId') : null;
-      const orgId = savedOrgId && dashboardData.by_org[savedOrgId] ? savedOrgId : (orgs[0]?.id ?? null);
+      let orgId =
+        savedOrgId && dashboardData.by_org[savedOrgId]
+          ? savedOrgId
+          : singleOrgId && dashboardData.by_org[singleOrgId]
+            ? singleOrgId
+            : orgs[0]?.id ?? null;
       if (orgId) applyStaticOrg(orgId);
     } else {
       staticData.organization = dashboardData.organization;
       staticData.suppliers = dashboardData.suppliers;
       staticData.perSupplier = dashboardData.per_supplier;
+      staticData.currentOrganizationId = metadata?.supplier_organization?.id ?? null;
     }
   } catch (error) {
     console.error('Failed to load static data:', error);
@@ -325,8 +344,15 @@ export const fetchFaxVolume = async (
     const volumeData = (staticData.organization?.volume_by_day || []) as Array<{date: string, count: number, supplier_id?: string}>;
     const filtered = filterBySupplier(volumeData, staticData.currentSupplierId);
     const aggregated = aggregateVolumeByDate(filtered);
-    const total = aggregated.reduce((sum, row) => sum + row.count, 0);
-    return { data: aggregated, total, period: 'day' as const };
+    // Filter to main export range when metadata has date_range (trend data may be extended)
+    const dateRange = staticData.metadata?.date_range as { start_date?: string; end_date?: string } | undefined;
+    const rangeStart = dateRange?.start_date;
+    const rangeEnd = dateRange?.end_date;
+    const inRange = (rangeStart != null && rangeEnd != null)
+      ? aggregated.filter((row) => row.date >= rangeStart && row.date <= rangeEnd)
+      : aggregated;
+    const total = inRange.reduce((sum, row) => sum + row.count, 0);
+    return { data: inRange, total, period: 'day' as const };
   }
   
   const { data } = await api.get('/volume/faxes', {
@@ -353,7 +379,7 @@ export const fetchFaxVolumeTrend = async (
     const endStr = formatDate(endDate);
     const inRange = aggregated.filter((row) => row.date >= startStr && row.date <= endStr);
 
-    // Aggregate daily data into weekly buckets
+    // Aggregate daily data into weekly buckets (chart uses trend window from Range toggles)
     const weeklyMap = new Map<string, number>();
     for (const row of inRange) {
       const weekStart = startOfWeek(new Date(row.date + 'T00:00:00'), { weekStartsOn: 1 });
@@ -364,7 +390,16 @@ export const fetchFaxVolumeTrend = async (
       .map(([date, count]) => ({ date, count }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    const total = weeklyData.reduce((sum, row) => sum + row.count, 0);
+    // Total: fixed to export date range when metadata has date_range (so card matches Document Outcomes); else sum over trend window
+    const dateRange = staticData.metadata?.date_range as { start_date?: string; end_date?: string } | undefined;
+    const rangeStart = dateRange?.start_date;
+    const rangeEnd = dateRange?.end_date;
+    const total =
+      rangeStart != null && rangeEnd != null
+        ? aggregated
+            .filter((row) => row.date >= rangeStart && row.date <= rangeEnd)
+            .reduce((sum, row) => sum + row.count, 0)
+        : weeklyData.reduce((sum, row) => sum + row.count, 0);
     return { data: weeklyData, total, period: 'week' };
   }
   
@@ -513,6 +548,11 @@ export const fetchStateDistribution = async (
 ): Promise<StateDistributionResponse> => {
   if (STATIC_MODE) {
     await loadStaticData();
+    const supplierId = staticData.currentSupplierId;
+    if (supplierId && staticData.perSupplier?.[supplierId]?.state_distribution) {
+      const d = staticData.perSupplier[supplierId].state_distribution;
+      return { data: d.data ?? [], total: d.total ?? 0 };
+    }
     const staticResponse = staticData.organization?.cycle_time?.state_distribution;
     if (staticResponse && Array.isArray(staticResponse.data)) {
       return { data: staticResponse.data, total: staticResponse.total ?? 0 };
@@ -523,6 +563,26 @@ export const fetchStateDistribution = async (
   const { data } = await api.get('/cycle-time/state-distribution', {
     params: buildParams(filters),
   });
+  return data;
+};
+
+/** State distribution for documents completed by a specific user (last accessor). */
+export const fetchStateDistributionByUser = async (
+  filters: FilterState,
+  userId: string
+): Promise<StateDistributionResponse> => {
+  if (STATIC_MODE) {
+    await loadStaticData();
+    const userDist = staticData.organization?.productivity?.state_distribution_by_user?.[userId];
+    if (!userDist?.data?.length) return { data: [], total: 0 };
+    const rawData = userDist.data as Array<{ state: string; label: string; count: number; percentage: number; supplier_id?: string }>;
+    const filtered = filterBySupplier(rawData, staticData.currentSupplierId);
+    const total = filtered.reduce((s, r) => s + r.count, 0);
+    const data = total > 0 ? filtered.map((r) => ({ ...r, percentage: Math.round((r.count * 10000) / total) / 100 })) : filtered;
+    return { data, total };
+  }
+  const params = { ...buildParams(filters), assignee_id: userId };
+  const { data } = await api.get('/cycle-time/state-distribution', { params });
   return data;
 };
 
@@ -597,6 +657,25 @@ export const fetchCategoryByIndividual = async (
   const { data } = await api.get('/productivity/category-breakdown', {
     params: buildParams(filters, { limit }),
   });
+  const aggregated = aggregateCategoryByUser(data.data);
+  return { data: aggregated };
+};
+
+/** Category breakdown for a single user. */
+export const fetchCategoryByUser = async (
+  filters: FilterState,
+  userId: string
+): Promise<CategoryByIndividualResponse> => {
+  if (STATIC_MODE) {
+    await loadStaticData();
+    const rawData = (staticData.organization?.productivity?.category_breakdown?.data || []) as Array<{ user_id: string; user_name: string; category: string; count: number; percentage: number; supplier_id?: string }>;
+    const filtered = filterBySupplier(rawData, staticData.currentSupplierId);
+    const forUser = filtered.filter((row) => row.user_id === userId);
+    const aggregated = aggregateCategoryByUser(forUser);
+    return { data: aggregated };
+  }
+  const params = { ...buildParams(filters), assignee_id: userId };
+  const { data } = await api.get('/productivity/category-breakdown', { params });
   const aggregated = aggregateCategoryByUser(data.data);
   return { data: aggregated };
 };

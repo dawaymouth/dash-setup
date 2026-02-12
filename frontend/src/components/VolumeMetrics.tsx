@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   LineChart,
   Line,
@@ -12,7 +12,8 @@ import {
 } from 'recharts';
 import { format, parseISO, subDays } from 'date-fns';
 import type { FilterState } from '../types';
-import { useFaxVolumeTrend, usePagesStats, useCategoryDistribution, useTimeOfDayVolume } from '../hooks/useMetrics';
+import { useFaxVolume, useFaxVolumeTrend, usePagesStats, useCategoryDistribution, useTimeOfDayVolume } from '../hooks/useMetrics';
+import { fetchStaticMetadata } from '../api';
 import { Modal } from './Modal';
 import { InfoButton } from './InfoButton';
 import { VolumeCalculations } from './calculationDocs';
@@ -49,19 +50,36 @@ const calculateLinearRegression = (data: Array<{date: string; count: number}>) =
   }));
 };
 
+const STATIC_MODE = import.meta.env.VITE_STATIC_DATA === 'true';
+
 export const VolumeMetrics: React.FC<VolumeMetricsProps> = ({ filters }) => {
   const [viewMode, setViewMode] = useState<'chart' | 'time'>('chart');
   const [trendTimeWindow, setTrendTimeWindow] = useState<30 | 60 | 90 | 180 | 365>(30);
   const [showInfoModal, setShowInfoModal] = useState(false);
-  
-  // Calculate trend date range (independent of main dashboard filters)
-  const trendEndDate = useMemo(() => new Date(), []);
+  const [staticExportEndDate, setStaticExportEndDate] = useState<Date | null>(null);
+
+  useEffect(() => {
+    if (STATIC_MODE) {
+      fetchStaticMetadata().then((meta) => {
+        const end = meta?.date_range?.end_date;
+        if (end) setStaticExportEndDate(new Date(end + 'T00:00:00'));
+      });
+    }
+  }, []);
+
+  // In static mode use export end date so chart aligns with export; else use today (stable ref)
+  const todayRef = useRef(new Date());
+  const trendEndDate = useMemo(() => {
+    if (STATIC_MODE && staticExportEndDate) return staticExportEndDate;
+    return todayRef.current;
+  }, [staticExportEndDate]);
   const trendStartDate = useMemo(
     () => subDays(trendEndDate, trendTimeWindow),
     [trendEndDate, trendTimeWindow]
   );
   
   const { data: timeData, isLoading: timeLoading } = useTimeOfDayVolume(filters);
+  const { data: volumeData, isLoading: volumeLoading } = useFaxVolume(filters, 'day');
   const { data: pagesData, isLoading: pagesLoading } = usePagesStats(filters);
   const { data: categoryData, isLoading: categoryLoading } = useCategoryDistribution(filters);
   
@@ -76,7 +94,7 @@ export const VolumeMetrics: React.FC<VolumeMetricsProps> = ({ filters }) => {
     'week'
   );
 
-  const isLoading = (viewMode === 'time' ? timeLoading : volumeTrendLoading) || pagesLoading || categoryLoading;
+  const isLoading = (viewMode === 'time' ? timeLoading : volumeTrendLoading || volumeLoading) || pagesLoading || categoryLoading;
 
   // Merge actual data with linear regression trend line data
   const chartData = useMemo(() => {
@@ -164,7 +182,7 @@ export const VolumeMetrics: React.FC<VolumeMetricsProps> = ({ filters }) => {
             <div className="bg-green-50 rounded-lg p-4">
               <p className="text-sm text-green-600 font-medium">Total Faxes Received</p>
               <p className="text-3xl font-bold text-green-700">
-                {(viewMode === 'time' ? timeData?.total : volumeTrendData?.total)?.toLocaleString() || 0}
+                {(viewMode === 'time' ? timeData?.total : volumeData?.total ?? volumeTrendData?.total)?.toLocaleString() || 0}
               </p>
             </div>
             <div className="bg-green-50 rounded-lg p-4">

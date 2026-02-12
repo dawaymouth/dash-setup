@@ -161,7 +161,7 @@ async def get_category_distribution(
     supplier_id: Optional[str] = Query(None, description="Filter by specific supplier"),
     supplier_organization_id: Optional[str] = Query(None, description="Filter by supplier organization"),
 ):
-    """Get category distribution of orders."""
+    """Get category distribution of documents (Documents -> Inbox State Categories -> Catalog Categories)."""
     
     # Default date range: last 30 days
     if not end_date:
@@ -169,27 +169,25 @@ async def get_category_distribution(
     if not start_date:
         start_date = end_date - timedelta(days=30)
     
-    # Build WHERE clauses for orders
-    where_clauses = [f"o.created_at >= '{start_date}' AND o.created_at < '{end_date + timedelta(days=1)}'"]
-    
+    # Build WHERE clauses for intake_documents
+    where_clauses = [get_date_filter_sql(start_date, end_date, "id.document_created_at")]
     if ai_intake_only:
-        where_clauses.append("o.supplier_id IN (SELECT DISTINCT supplier_id FROM analytics.intake_documents WHERE is_ai_intake_enabled = true)")
-    
+        where_clauses.append("id.is_ai_intake_enabled = true")
     if supplier_id:
-        where_clauses.append(f"o.supplier_id = '{supplier_id}'")
-    
+        where_clauses.append(f"id.supplier_id = '{supplier_id}'")
     if supplier_organization_id:
-        where_clauses.append(f"o.supplier_organization_id = '{supplier_organization_id}'")
-    
+        where_clauses.append(f"id.supplier_organization_id = '{supplier_organization_id}'")
     where_sql = " AND ".join(where_clauses)
     
     query = f"""
-        SELECT 
-            o.supplier_id,
-            COALESCE(os.category, 'Uncategorized') as category,
-            COUNT(DISTINCT o.order_id) as count
-        FROM analytics.orders o
-        LEFT JOIN analytics.order_skus os ON o.order_id = os.order_id
+        SELECT
+            id.supplier_id,
+            COALESCE(cat.name, 'Uncategorized') AS category,
+            COUNT(DISTINCT id.intake_document_id) AS count
+        FROM analytics.intake_documents id
+        LEFT JOIN workflow.csr_inbox_states s ON id.intake_document_id = s.external_id
+        LEFT JOIN workflow.csr_inbox_state_categories state_cat ON s.id = state_cat.csr_inbox_state_id
+        LEFT JOIN workflow.catalog_categories cat ON state_cat.catalog_category_id = cat.id
         WHERE {where_sql}
         GROUP BY 1, 2
         ORDER BY 1, 3 DESC

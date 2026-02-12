@@ -9,9 +9,11 @@ import {
   fetchReceivedToOpenTime,
   fetchProcessingTime,
   fetchStateDistribution,
+  fetchStateDistributionByUser,
   fetchProductivityByIndividual,
   fetchDailyAverageProductivity,
   fetchCategoryByIndividual,
+  fetchCategoryByUser,
   fetchProcessingTimeByIndividual,
   fetchSuppliers,
   fetchSupplierOrganizations,
@@ -109,6 +111,22 @@ export const useCategoryByIndividual = (filters: FilterState, limit = 20) => {
   return useQuery({
     queryKey: ['categoryByIndividual', filters, limit],
     queryFn: () => fetchCategoryByIndividual(filters, limit),
+  });
+};
+
+export const useCategoryByUser = (filters: FilterState, userId: string | null) => {
+  return useQuery({
+    queryKey: ['categoryByUser', filters, userId],
+    queryFn: () => fetchCategoryByUser(filters, userId!),
+    enabled: !!userId,
+  });
+};
+
+export const useStateDistributionByUser = (filters: FilterState, userId: string | null) => {
+  return useQuery({
+    queryKey: ['stateDistributionByUser', filters, userId],
+    queryFn: () => fetchStateDistributionByUser(filters, userId!),
+    enabled: !!userId,
   });
 };
 

@@ -5,6 +5,12 @@ Used by export_full_ai_dashboard.py. Mirrors router logic for volume, cycle time
 from datetime import date, timedelta
 from typing import Optional
 
+from app.cycle_time_sql import (
+    build_received_to_open_business_hours_bulk_overall_query,
+    build_received_to_open_business_hours_bulk_query,
+    build_received_to_open_business_hours_overall_query,
+    build_received_to_open_business_hours_query,
+)
 from app.database import execute_query
 
 
@@ -38,6 +44,7 @@ def query_volume_by_day_bulk(start_date: date, end_date: date, org_ids: list[str
         FROM analytics.intake_documents
         WHERE {date_sql}
           AND {org_sql}
+          AND is_ai_intake_enabled = true
         GROUP BY 1, 2, 3
         ORDER BY 3, 1, 2
     """
@@ -78,12 +85,13 @@ def query_time_of_day_bulk(start_date: date, end_date: date, org_ids: list[str])
         FROM analytics.intake_documents
         WHERE {date_sql}
           AND {org_sql}
+          AND is_ai_intake_enabled = true
     """
     return execute_query(query)
 
 
 def query_suppliers_bulk(org_ids: list[str]) -> list[dict]:
-    """Suppliers for all given orgs. Returns supplier_organization_id, supplier_id, name, ai_intake_enabled."""
+    """Suppliers for all given orgs (AI intake enabled only, per workflow.suppliers). Returns supplier_organization_id, supplier_id, name, ai_intake_enabled."""
     if not org_ids:
         return []
     org_sql = _org_in_list_sql(org_ids)
@@ -92,11 +100,12 @@ def query_suppliers_bulk(org_ids: list[str]) -> list[dict]:
             id.supplier_organization_id,
             id.supplier_id,
             id.supplier as name,
-            MAX(CASE WHEN id.is_ai_intake_enabled = true THEN 1 ELSE 0 END)::boolean as ai_intake_enabled
+            sup.ai_intake_enabled
         FROM analytics.intake_documents id
+        JOIN workflow.suppliers sup ON sup.external_id = id.supplier_id AND sup.ai_intake_enabled = true
         WHERE id.supplier_organization_id IN ({','.join(f"'{oid}'" for oid in org_ids)})
           AND id.supplier_id IS NOT NULL
-        GROUP BY id.supplier_organization_id, id.supplier_id, id.supplier
+        GROUP BY id.supplier_organization_id, id.supplier_id, id.supplier, sup.ai_intake_enabled
         ORDER BY id.supplier_organization_id, id.supplier
     """
     return execute_query(query)
@@ -115,7 +124,7 @@ def query_pages_org_bulk(start_date: date, end_date: date, org_ids: list[str]) -
             COALESCE(SUM(d.page_count), 0) as total_pages
         FROM analytics.intake_documents id
         LEFT JOIN workflow.documents d ON d.external_id = id.document_id
-        WHERE {org_sql} AND {date_sql}
+        WHERE {org_sql} AND {date_sql} AND id.is_ai_intake_enabled = true
         GROUP BY id.supplier_organization_id
     """
     return execute_query(query)
@@ -135,7 +144,7 @@ def query_pages_by_supplier_bulk(start_date: date, end_date: date, org_ids: list
             COALESCE(SUM(d.page_count), 0) as total_pages
         FROM analytics.intake_documents id
         LEFT JOIN workflow.documents d ON d.external_id = id.document_id
-        WHERE {org_sql} AND {date_sql} AND id.supplier_id IS NOT NULL
+        WHERE {org_sql} AND {date_sql} AND id.supplier_id IS NOT NULL AND id.is_ai_intake_enabled = true
         GROUP BY id.supplier_organization_id, id.supplier_id
     """
     return execute_query(query)
@@ -207,6 +216,7 @@ def _build_base_ctes_bulk(start_date: date, end_date: date, org_ids: list[str]) 
             WHERE a.user_id IS NULL
               AND a.created_at >= '{start_date}' AND a.created_at < '{end_date + timedelta(days=1)}'
               AND so.external_id IN ({org_list})
+              AND id.is_ai_intake_enabled = true
         ),
         last_values AS (
             SELECT a.csr_inbox_state_id, a.field_identifier, a.field_value,
@@ -218,6 +228,7 @@ def _build_base_ctes_bulk(start_date: date, end_date: date, org_ids: list[str]) 
             JOIN workflow.supplier_organizations so ON sup.supplier_organization_id = so.id
             WHERE a.created_at >= '{start_date}' AND a.created_at < '{end_date + timedelta(days=1)}'
               AND so.external_id IN ({org_list})
+              AND id.is_ai_intake_enabled = true
         ),
         comparisons AS (
             SELECT f.record_type, f.field_identifier, f.csr_inbox_state_id, f.created_at, f.supplier_id, f.supplier_organization_id,
@@ -313,36 +324,19 @@ def query_document_accuracy_by_supplier(org_id: str, start_date: date, end_date:
 # ---------------------------------------------------------------------------
 
 def query_cycle_received_to_open(org_id: str, start_date: date, end_date: date) -> tuple[list[dict], float]:
-    """Per-day per-supplier median minutes; overall median. Uses calendar time (no business-hours)."""
+    """Per-day per-supplier median minutes; overall median. Uses business hours (8 AM–6 PM Mon–Fri), matching API and UI."""
     where_sql = (
         f"document_created_at >= '{start_date}' AND document_created_at < '{end_date + timedelta(days=1)}'"
         f" AND document_first_accessed_at IS NOT NULL"
         f" AND supplier_organization_id = '{org_id}'"
     )
-    time_calc = "DATEDIFF(minute, document_created_at, document_first_accessed_at)"
-    query = f"""
-        SELECT
-            DATE_TRUNC('day', document_created_at)::date AS date,
-            supplier_id,
-            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {time_calc}) AS avg_minutes,
-            COUNT(*) AS count
-        FROM analytics.intake_documents
-        WHERE {where_sql}
-          AND {time_calc} > 0
-          AND {time_calc} < 10080
-        GROUP BY 1, 2
-        ORDER BY 1, 2
-    """
+    query = build_received_to_open_business_hours_query(where_sql)
     results = execute_query(query)
     data = [
         {"date": r["date"], "avg_minutes": round(float(r["avg_minutes"] or 0), 2), "count": r["count"], "supplier_id": r.get("supplier_id")}
         for r in results
     ]
-    overall_q = f"""
-        SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {time_calc}) AS median_minutes
-        FROM analytics.intake_documents
-        WHERE {where_sql} AND {time_calc} > 0 AND {time_calc} < 10080
-    """
+    overall_q = build_received_to_open_business_hours_overall_query(where_sql)
     overall_rows = execute_query(overall_q)
     overall_median = round(float(overall_rows[0]["median_minutes"]), 2) if overall_rows and overall_rows[0].get("median_minutes") is not None else 0
     return data, overall_median
@@ -385,7 +379,16 @@ def query_cycle_processing(org_id: str, start_date: date, end_date: date) -> tup
     return data, overall_median
 
 
-STATE_LABELS = {"assigned": "Assigned", "discarded": "Discarded", "emailed": "Emailed", "pushed": "Pushed", "split": "Split"}
+STATE_LABELS = {
+    "assigned": "Assigned",
+    "assigned_other": "Assigned (other)",
+    "attached_to_existing": "Attached to existing order",
+    "discarded": "Discarded",
+    "emailed": "Emailed",
+    "generated_new": "Generated new order",
+    "pushed": "Pushed",
+    "split": "Split",
+}
 INCLUDED_STATES = ("assigned", "discarded", "emailed", "pushed", "split", "splitting")
 
 
@@ -394,22 +397,15 @@ INCLUDED_STATES = ("assigned", "discarded", "emailed", "pushed", "split", "split
 # ---------------------------------------------------------------------------
 
 def query_cycle_received_to_open_bulk(start_date: date, end_date: date, org_ids: list[str]) -> tuple[list[dict], dict]:
-    """Bulk: rows with supplier_organization_id, date, supplier_id, avg_minutes, count; overall_by_org = median per org."""
+    """Bulk: rows with supplier_organization_id, date, supplier_id, avg_minutes, count; overall_by_org = median per org. Uses business hours (8 AM–6 PM Mon–Fri), matching API and UI."""
     if not org_ids:
         return [], {}
     org_sql = _org_in_list_sql(org_ids)
     where_sql = (
         f"document_created_at >= '{start_date}' AND document_created_at < '{end_date + timedelta(days=1)}'"
-        f" AND document_first_accessed_at IS NOT NULL AND {org_sql}"
+        f" AND document_first_accessed_at IS NOT NULL AND {org_sql} AND is_ai_intake_enabled = true"
     )
-    time_calc = "DATEDIFF(minute, document_created_at, document_first_accessed_at)"
-    query = f"""
-        SELECT supplier_organization_id, DATE_TRUNC('day', document_created_at)::date AS date, supplier_id,
-               PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {time_calc}) AS avg_minutes, COUNT(*) AS count
-        FROM analytics.intake_documents
-        WHERE {where_sql} AND {time_calc} > 0 AND {time_calc} < 10080
-        GROUP BY 1, 2, 3 ORDER BY 1, 2, 3
-    """
+    query = build_received_to_open_business_hours_bulk_query(where_sql)
     rows = execute_query(query)
     data = []
     for r in rows:
@@ -420,12 +416,7 @@ def query_cycle_received_to_open_bulk(start_date: date, end_date: date, org_ids:
             "avg_minutes": round(float(r["avg_minutes"] or 0), 2),
             "count": r["count"],
         })
-    overall_q = f"""
-        SELECT supplier_organization_id, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {time_calc}) AS median_minutes
-        FROM analytics.intake_documents
-        WHERE {where_sql} AND {time_calc} > 0 AND {time_calc} < 10080
-        GROUP BY supplier_organization_id
-    """
+    overall_q = build_received_to_open_business_hours_bulk_overall_query(where_sql)
     overall_rows = execute_query(overall_q)
     overall_by_org = {r["supplier_organization_id"]: round(float(r["median_minutes"] or 0), 2) for r in overall_rows}
     return data, overall_by_org
@@ -438,7 +429,7 @@ def query_cycle_processing_bulk(start_date: date, end_date: date, org_ids: list[
     org_sql = _org_in_list_sql(org_ids)
     where_sql = (
         f"document_created_at >= '{start_date}' AND document_created_at < '{end_date + timedelta(days=1)}'"
-        f" AND document_first_accessed_at IS NOT NULL AND state NOT IN ('new') AND {org_sql}"
+        f" AND document_first_accessed_at IS NOT NULL AND state NOT IN ('new') AND {org_sql} AND is_ai_intake_enabled = true"
     )
     time_calc = "DATEDIFF(minute, document_first_accessed_at, intake_updated_at)"
     query = f"""
@@ -462,6 +453,25 @@ def query_cycle_processing_bulk(start_date: date, end_date: date, org_ids: list[
     return data, overall_by_org
 
 
+def _state_distribution_derived_state_sql() -> str:
+    """Derived state for Document Outcomes: split assigned into attached_to_existing, generated_new, assigned_other."""
+    return """
+        CASE
+            WHEN state = 'assigned' AND is_document_attached_to_existing_dme_order = true THEN 'attached_to_existing'
+            WHEN state = 'assigned' AND is_document_generated_new_dme_order = true THEN 'generated_new'
+            WHEN state = 'assigned' THEN 'assigned_other'
+            WHEN state IN ('split', 'splitting') THEN 'split'
+            ELSE state
+        END
+    """
+
+
+def _state_distribution_column_missing(err: Exception) -> bool:
+    """True if error looks like a missing column (e.g. new DME order columns not yet in Redshift)."""
+    msg = str(err).lower()
+    return "column" in msg and ("does not exist" in msg or "not found" in msg)
+
+
 def query_cycle_state_distribution_bulk(start_date: date, end_date: date, org_ids: list[str]) -> list[dict]:
     """Bulk: one row per (supplier_organization_id, state, supplier_id) with count; caller aggregates to { data, total } per org."""
     if not org_ids:
@@ -469,28 +479,139 @@ def query_cycle_state_distribution_bulk(start_date: date, end_date: date, org_id
     org_sql = _org_in_list_sql(org_ids)
     where_sql = (
         f"document_created_at >= '{start_date}' AND document_created_at < '{end_date + timedelta(days=1)}'"
-        f" AND state IN ({','.join(repr(s) for s in INCLUDED_STATES)}) AND {org_sql}"
+        f" AND state IN ({','.join(repr(s) for s in INCLUDED_STATES)}) AND {org_sql} AND is_ai_intake_enabled = true"
     )
+    derived = _state_distribution_derived_state_sql()
     query = f"""
         SELECT supplier_organization_id,
-               CASE WHEN state IN ('split', 'splitting') THEN 'split' ELSE state END AS state,
+               {derived} AS state,
                supplier_id, COUNT(*) AS count
         FROM analytics.intake_documents WHERE {where_sql}
         GROUP BY 1, 2, 3 ORDER BY 1, 3 DESC
     """
-    return execute_query(query)
+    try:
+        return execute_query(query)
+    except Exception as e:
+        if not _state_distribution_column_missing(e):
+            raise
+        query_fallback = f"""
+            SELECT supplier_organization_id,
+                   CASE WHEN state IN ('split', 'splitting') THEN 'split' ELSE state END AS state,
+                   supplier_id, COUNT(*) AS count
+            FROM analytics.intake_documents WHERE {where_sql}
+            GROUP BY 1, 2, 3 ORDER BY 1, 3 DESC
+        """
+        return execute_query(query_fallback)
+
+
+def query_cycle_state_distribution_by_user_bulk(
+    start_date: date, end_date: date, org_ids: list[str]
+) -> list[dict]:
+    """Bulk: one row per (supplier_organization_id, user_id, state, supplier_id) with count; caller groups by org and user."""
+    if not org_ids:
+        return []
+    org_sql = _org_in_list_sql(org_ids)
+    where_sql = (
+        f"d.document_created_at >= '{start_date}' AND d.document_created_at < '{end_date + timedelta(days=1)}'"
+        f" AND d.state IN ({','.join(repr(s) for s in INCLUDED_STATES)}) AND {org_sql} AND d.is_ai_intake_enabled = true"
+    )
+    derived = _state_distribution_derived_state_sql()
+    query = f"""
+        WITH last_access AS (
+            SELECT
+                a.csr_inbox_state_id,
+                u.external_id AS user_external_id,
+                ROW_NUMBER() OVER (PARTITION BY a.csr_inbox_state_id ORDER BY a.last_accessed_at DESC) AS rn
+            FROM workflow.csr_inbox_state_accesses a
+            JOIN workflow.users u ON a.user_id = u.id
+        ),
+        doc_user AS (
+            SELECT
+                d.supplier_organization_id,
+                la.user_external_id AS user_id,
+                d.state,
+                d.supplier_id,
+                d.is_document_attached_to_existing_dme_order,
+                d.is_document_generated_new_dme_order
+            FROM analytics.intake_documents d
+            JOIN workflow.csr_inbox_states s ON d.intake_document_id = s.external_id
+            JOIN last_access la ON s.id = la.csr_inbox_state_id AND la.rn = 1
+            WHERE {where_sql}
+        )
+        SELECT supplier_organization_id, user_id,
+               {derived} AS state,
+               supplier_id, COUNT(*) AS count
+        FROM doc_user
+        GROUP BY 1, 2, 3, 4
+        ORDER BY 1, 2, 5 DESC
+    """
+    try:
+        rows = execute_query(query)
+        return [
+            {
+                "supplier_organization_id": r["supplier_organization_id"],
+                "user_id": r["user_id"],
+                "state": r["state"],
+                "supplier_id": r.get("supplier_id"),
+                "count": r["count"],
+            }
+            for r in rows
+        ]
+    except Exception as e:
+        if not _state_distribution_column_missing(e):
+            raise
+        derived_fallback = "CASE WHEN state IN ('split', 'splitting') THEN 'split' ELSE state END"
+        query_fallback = f"""
+            WITH last_access AS (
+                SELECT
+                    a.csr_inbox_state_id,
+                    u.external_id AS user_external_id,
+                    ROW_NUMBER() OVER (PARTITION BY a.csr_inbox_state_id ORDER BY a.last_accessed_at DESC) AS rn
+                FROM workflow.csr_inbox_state_accesses a
+                JOIN workflow.users u ON a.user_id = u.id
+            ),
+            doc_user AS (
+                SELECT
+                    d.supplier_organization_id,
+                    la.user_external_id AS user_id,
+                    d.state,
+                    d.supplier_id
+                FROM analytics.intake_documents d
+                JOIN workflow.csr_inbox_states s ON d.intake_document_id = s.external_id
+                JOIN last_access la ON s.id = la.csr_inbox_state_id AND la.rn = 1
+                WHERE {where_sql}
+            )
+            SELECT supplier_organization_id, user_id,
+                   {derived_fallback} AS state,
+                   supplier_id, COUNT(*) AS count
+            FROM doc_user
+            GROUP BY 1, 2, 3, 4
+            ORDER BY 1, 2, 5 DESC
+        """
+        rows = execute_query(query_fallback)
+        return [
+            {
+                "supplier_organization_id": r["supplier_organization_id"],
+                "user_id": r["user_id"],
+                "state": r["state"],
+                "supplier_id": r.get("supplier_id"),
+                "count": r["count"],
+            }
+            for r in rows
+        ]
 
 
 def query_cycle_state_distribution(org_id: str, start_date: date, end_date: date) -> dict:
-    """State distribution: list of { state, label, count, percentage }, total."""
+    """State distribution: list of { state, label, count, percentage }, total. Assigned split into attached_to_existing, generated_new, assigned_other."""
     where_sql = (
         f"document_created_at >= '{start_date}' AND document_created_at < '{end_date + timedelta(days=1)}'"
         f" AND state IN ({','.join(repr(s) for s in INCLUDED_STATES)})"
         f" AND supplier_organization_id = '{org_id}'"
     )
+    derived = _state_distribution_derived_state_sql()
     query = f"""
         SELECT
-            CASE WHEN state IN ('split', 'splitting') THEN 'split' ELSE state END AS state,
+            {derived} AS state,
             supplier_id,
             COUNT(*) AS count
         FROM analytics.intake_documents
@@ -498,7 +619,22 @@ def query_cycle_state_distribution(org_id: str, start_date: date, end_date: date
         GROUP BY 1, 2
         ORDER BY 3 DESC
     """
-    results = execute_query(query)
+    try:
+        results = execute_query(query)
+    except Exception as e:
+        if not _state_distribution_column_missing(e):
+            raise
+        query_fallback = f"""
+            SELECT
+                CASE WHEN state IN ('split', 'splitting') THEN 'split' ELSE state END AS state,
+                supplier_id,
+                COUNT(*) AS count
+            FROM analytics.intake_documents
+            WHERE {where_sql}
+            GROUP BY 1, 2
+            ORDER BY 3 DESC
+        """
+        results = execute_query(query_fallback)
     state_totals = {}
     for r in results:
         st = r["state"]
@@ -519,7 +655,7 @@ def _productivity_where_bulk(start_date: date, end_date: date, org_ids: list[str
     if not org_ids:
         return "1=0"
     org_sql = "d.supplier_organization_id IN (" + ",".join(f"'{oid}'" for oid in org_ids) + ")"
-    return f"d.document_created_at >= '{start_date}' AND d.document_created_at < '{end_date + timedelta(days=1)}' AND d.state NOT IN ('new') AND {org_sql}"
+    return f"d.document_created_at >= '{start_date}' AND d.document_created_at < '{end_date + timedelta(days=1)}' AND d.state NOT IN ('new') AND {org_sql} AND d.is_ai_intake_enabled = true"
 
 
 def query_productivity_by_individual_bulk(start_date: date, end_date: date, org_ids: list[str], limit_per_org: int = 50) -> list[dict]:
@@ -647,27 +783,51 @@ def query_productivity_by_individual_processing_time_bulk(start_date: date, end_
 
 
 def query_productivity_category_breakdown_bulk(start_date: date, end_date: date, org_ids: list[str], limit_per_org: int = 20) -> list[dict]:
+    """Bulk: category breakdown by last accessor (workflow users.external_id) and document categories (workflow catalog).
+    Same user_id as by_individual so static export user drill-down finds category rows."""
     if not org_ids:
         return []
-    org_sql = "o.supplier_organization_id IN (" + ",".join(f"'{oid}'" for oid in org_ids) + ")"
-    date_sql = f"o.created_at >= '{start_date}' AND o.created_at < '{end_date + timedelta(days=1)}'"
-    where_sql = f"{date_sql} AND o.assignee_id IS NOT NULL AND {org_sql}"
+    where_sql = _productivity_where_bulk(start_date, end_date, org_ids)
     query = f"""
-        WITH individual_totals AS (
-            SELECT o.supplier_organization_id, o.assignee_id as user_id, o.assignee as user_name, o.supplier_id, COUNT(*) as total_orders,
-                   ROW_NUMBER() OVER (PARTITION BY o.supplier_organization_id ORDER BY COUNT(*) DESC) as rn
-            FROM analytics.orders o LEFT JOIN interim.suppliers s ON o.supplier_id = s.external_id
-            WHERE {where_sql} GROUP BY 1, 2, 3, 4
+        WITH last_access AS (
+            SELECT a.csr_inbox_state_id, u.external_id AS user_external_id,
+                   u.first_name || ' ' || u.last_name AS user_name,
+                   ROW_NUMBER() OVER (PARTITION BY a.csr_inbox_state_id ORDER BY a.last_accessed_at DESC) AS rn
+            FROM workflow.csr_inbox_state_accesses a
+            JOIN workflow.users u ON a.user_id = u.id
         ),
-        top_individuals AS (SELECT supplier_organization_id, user_id, user_name, supplier_id, total_orders FROM individual_totals WHERE rn <= {limit_per_org}),
+        docs_with_user_and_cat AS (
+            SELECT d.supplier_organization_id, la.user_external_id AS user_id, la.user_name, d.supplier_id,
+                   COALESCE(cat.name, 'Uncategorized') AS category
+            FROM analytics.intake_documents d
+            JOIN workflow.csr_inbox_states s ON d.intake_document_id = s.external_id
+            JOIN last_access la ON s.id = la.csr_inbox_state_id AND la.rn = 1
+            LEFT JOIN workflow.csr_inbox_state_categories state_cat ON s.id = state_cat.csr_inbox_state_id
+            LEFT JOIN workflow.catalog_categories cat ON state_cat.catalog_category_id = cat.id
+            WHERE {where_sql}
+        ),
+        user_totals AS (
+            SELECT supplier_organization_id, user_id, user_name, supplier_id, COUNT(*) AS total,
+                   ROW_NUMBER() OVER (PARTITION BY supplier_organization_id ORDER BY COUNT(*) DESC) AS rn
+            FROM docs_with_user_and_cat
+            GROUP BY 1, 2, 3, 4
+        ),
+        top_users AS (
+            SELECT supplier_organization_id, user_id, user_name, supplier_id, total
+            FROM user_totals WHERE rn <= {limit_per_org}
+        ),
         category_counts AS (
-            SELECT o.supplier_organization_id, o.assignee_id as user_id, o.assignee as user_name, o.supplier_id, COALESCE(os.category, 'Uncategorized') as category, COUNT(DISTINCT o.order_id) as count
-            FROM analytics.orders o LEFT JOIN analytics.order_skus os ON o.order_id = os.order_id LEFT JOIN interim.suppliers s ON o.supplier_id = s.external_id
-            WHERE {where_sql} AND (o.supplier_organization_id, o.assignee_id, o.supplier_id) IN (SELECT supplier_organization_id, user_id, supplier_id FROM top_individuals)
+            SELECT dw.supplier_organization_id, dw.user_id, dw.user_name, dw.supplier_id, dw.category, COUNT(*) AS count
+            FROM docs_with_user_and_cat dw
+            WHERE (dw.supplier_organization_id, dw.user_id, dw.supplier_id) IN (
+                SELECT supplier_organization_id, user_id, supplier_id FROM top_users
+            )
             GROUP BY 1, 2, 3, 4, 5
         )
-        SELECT cc.supplier_organization_id, cc.user_id, cc.user_name, cc.supplier_id, cc.category, cc.count, ROUND(cc.count * 100.0 / it.total_orders, 2) as percentage
-        FROM category_counts cc JOIN top_individuals it ON cc.supplier_organization_id = it.supplier_organization_id AND cc.user_id = it.user_id AND cc.supplier_id = it.supplier_id
+        SELECT cc.supplier_organization_id, cc.user_id, cc.user_name, cc.supplier_id, cc.category, cc.count,
+               ROUND(cc.count * 100.0 / tu.total, 2) AS percentage
+        FROM category_counts cc
+        JOIN top_users tu ON cc.supplier_organization_id = tu.supplier_organization_id AND cc.user_id = tu.user_id AND cc.supplier_id = tu.supplier_id
         ORDER BY cc.supplier_organization_id, cc.user_name, cc.count DESC
     """
     rows = execute_query(query)

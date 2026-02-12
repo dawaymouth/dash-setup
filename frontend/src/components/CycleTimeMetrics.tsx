@@ -18,11 +18,14 @@ import { CycleTimeCalculations } from './calculationDocs';
 
 // Distinct colours for each document-outcome state (red palette)
 const STATE_COLORS: Record<string, string> = {
-  pushed: '#dc2626',     // red-600
-  assigned: '#ef4444',   // red-500
-  emailed: '#f87171',    // red-400
-  discarded: '#9f1239',  // rose-800
-  split: '#fb923c',      // orange-400
+  pushed: '#dc2626',           // red-600
+  assigned: '#ef4444',         // red-500
+  attached_to_existing: '#ef4444',  // red-500 (Assigned subset)
+  generated_new: '#f87171',    // red-400 (Assigned subset)
+  assigned_other: '#fca5a5',   // red-300 (Assigned subset)
+  emailed: '#f87171',          // red-400
+  discarded: '#9f1239',        // rose-800
+  split: '#fb923c',            // orange-400
 };
 
 interface CycleTimeMetricsProps {

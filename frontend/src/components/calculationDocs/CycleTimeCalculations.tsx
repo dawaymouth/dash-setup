@@ -34,11 +34,13 @@ export const CycleTimeCalculations: React.FC = () => (
     <div>
       <h4 className="font-semibold text-gray-900 mb-1">Document Outcomes</h4>
       <p className="text-gray-600 mb-2">
-        Percentage breakdown of processed documents by their terminal state.
+        Percentage breakdown of processed documents by their terminal state. Assigned documents are split into: attached to an existing DME order, generated a new DME order, or other.
       </p>
       <ul className="list-disc list-inside text-gray-600 space-y-1 ml-2">
         <li><span className="font-medium">Pushed:</span> Document pushed to destination system</li>
-        <li><span className="font-medium">Assigned:</span> Document assigned to an order (new or existing)</li>
+        <li><span className="font-medium">Attached to existing order:</span> Assigned document attached to an existing DME order</li>
+        <li><span className="font-medium">Generated new order:</span> Assigned document that generated a new DME order</li>
+        <li><span className="font-medium">Assigned (other):</span> Assigned documents that are neither attached to existing nor generated new</li>
         <li><span className="font-medium">Emailed:</span> Document sent via email</li>
         <li><span className="font-medium">Discarded:</span> Document marked as discarded</li>
         <li><span className="font-medium">Split:</span> Document split into multiple documents (includes documents currently being split)</li>

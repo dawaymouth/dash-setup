@@ -7,14 +7,29 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Cell,
 } from 'recharts';
-import type { FilterState } from '../types';
+import type { FilterState, IndividualProductivity } from '../types';
 import {
   useProductivityByIndividual,
+  useCategoryByUser,
+  useStateDistributionByUser,
 } from '../hooks/useMetrics';
 import { Modal } from './Modal';
 import { InfoButton } from './InfoButton';
 import { ProductivityCalculations } from './calculationDocs';
+
+// Document outcome state colors (same as CycleTimeMetrics)
+const STATE_COLORS: Record<string, string> = {
+  pushed: '#dc2626',
+  assigned: '#ef4444',
+  attached_to_existing: '#ef4444',
+  generated_new: '#f87171',
+  assigned_other: '#fca5a5',
+  emailed: '#f87171',
+  discarded: '#9f1239',
+  split: '#fb923c',
+};
 
 interface ProductivityMetricsProps {
   filters: FilterState;
@@ -23,9 +38,12 @@ interface ProductivityMetricsProps {
 export const ProductivityMetrics: React.FC<ProductivityMetricsProps> = ({ filters }) => {
   const [view, setView] = useState<'total' | 'daily' | 'speed'>('total');
   const [showInfoModal, setShowInfoModal] = useState(false);
-  
+  const [selectedUser, setSelectedUser] = useState<IndividualProductivity | null>(null);
+
   // Fetch once with higher limit for more complete data
   const { data, isLoading } = useProductivityByIndividual(filters, 50);
+  const { data: categoryByUserData, isLoading: categoryByUserLoading } = useCategoryByUser(filters, selectedUser?.user_id ?? null);
+  const { data: stateByUserData, isLoading: stateByUserLoading } = useStateDistributionByUser(filters, selectedUser?.user_id ?? null);
 
   // Client-side sorting based on selected view
   const sortedData = useMemo(() => {
@@ -186,7 +204,8 @@ export const ProductivityMetrics: React.FC<ProductivityMetricsProps> = ({ filter
                   {sortedData.map((item, index) => (
                     <tr
                       key={item.user_id}
-                      className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+                      onClick={() => setSelectedUser(item)}
+                      className={`cursor-pointer hover:bg-fuchsia-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
                     >
                       <td className="px-4 py-1.5 whitespace-nowrap text-sm text-gray-900">
                         {item.user_name}
@@ -216,6 +235,113 @@ export const ProductivityMetrics: React.FC<ProductivityMetricsProps> = ({ filter
         colorClass="border-fuchsia-500"
       >
         <ProductivityCalculations />
+      </Modal>
+
+      {/* User detail modal: Category Distribution + Document Outcomes */}
+      <Modal
+        isOpen={!!selectedUser}
+        onClose={() => setSelectedUser(null)}
+        title={selectedUser ? selectedUser.user_name : ''}
+        colorClass="border-fuchsia-500"
+      >
+        {selectedUser && (
+          <div className="space-y-6">
+            {/* Summary */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-fuchsia-50 rounded-lg p-3">
+                <p className="text-xs text-fuchsia-600 font-medium">Total Docs</p>
+                <p className="text-xl font-bold text-fuchsia-700">{selectedUser.total_processed.toLocaleString()}</p>
+              </div>
+              <div className="bg-fuchsia-50 rounded-lg p-3">
+                <p className="text-xs text-fuchsia-600 font-medium">Daily Avg</p>
+                <p className="text-xl font-bold text-fuchsia-700">{selectedUser.avg_per_day.toFixed(1)}</p>
+              </div>
+              <div className="bg-fuchsia-50 rounded-lg p-3">
+                <p className="text-xs text-fuchsia-600 font-medium">Median Time</p>
+                <p className="text-xl font-bold text-fuchsia-700">
+                  {selectedUser.median_minutes != null ? `${Math.round(selectedUser.median_minutes)} min` : '—'}
+                </p>
+              </div>
+            </div>
+
+            {/* Category Distribution */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Category Distribution</h4>
+              {categoryByUserLoading ? (
+                <div className="flex justify-center py-6">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-fuchsia-500" />
+                </div>
+              ) : (categoryByUserData?.data?.length ?? 0) > 0 ? (
+                <div className="overflow-x-auto max-h-48 overflow-y-auto">
+                  <table className="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        <th className="px-3 py-1.5 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                        <th className="px-3 py-1.5 text-right text-xs font-medium text-gray-500 uppercase">%</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {[...(categoryByUserData?.data ?? [])]
+                        .sort((a, b) => b.percentage - a.percentage)
+                        .map((row, i) => (
+                          <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="px-3 py-1.5 text-gray-900">{row.category}</td>
+                            <td className="px-3 py-1.5 text-gray-600 text-right">{row.percentage.toFixed(1)}%</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 py-2">No category data for this user.</p>
+              )}
+            </div>
+
+            {/* Document Outcomes */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Document Outcomes</h4>
+              {stateByUserLoading ? (
+                <div className="flex justify-center py-6">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-fuchsia-500" />
+                </div>
+              ) : (stateByUserData?.data?.length ?? 0) > 0 && stateByUserData ? (
+                <>
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={stateByUserData.data} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis
+                          type="number"
+                          tick={{ fontSize: 11 }}
+                          stroke="#9ca3af"
+                          tickFormatter={(v) => `${v}%`}
+                          domain={[0, 'auto']}
+                        />
+                        <YAxis dataKey="label" type="category" width={100} tick={{ fontSize: 11 }} stroke="#9ca3af" />
+                        <Tooltip
+                          formatter={(value: number, _name: string, props: { payload?: { count: number } }) => [
+                            `${value}% (${(props.payload?.count ?? 0).toLocaleString()} faxes)`,
+                            'Percentage',
+                          ]}
+                        />
+                        <Bar dataKey="percentage" radius={[0, 4, 4, 0]}>
+                          {stateByUserData.data.map((entry) => (
+                            <Cell key={entry.state} fill={STATE_COLORS[entry.state] ?? '#d946ef'} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1 text-right">
+                    Total: {stateByUserData.total.toLocaleString()} documents
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-gray-500 py-2">No document outcome data for this user.</p>
+              )}
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

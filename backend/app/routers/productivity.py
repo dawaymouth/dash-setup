@@ -1,11 +1,14 @@
 """
 Productivity metrics API endpoints.
 """
+import logging
 from datetime import date, timedelta
 from fastapi import APIRouter, Query
 from typing import Optional
 
 from app.database import execute_query
+
+logger = logging.getLogger(__name__)
 from app.models import (
     IndividualProductivity,
     ProductivityResponse,
@@ -273,6 +276,7 @@ async def get_category_by_individual(
     ai_intake_only: bool = Query(False, description="Filter to AI intake enabled suppliers only"),
     supplier_id: Optional[str] = Query(None, description="Filter by specific supplier"),
     supplier_organization_id: Optional[str] = Query(None, description="Filter by supplier organization"),
+    assignee_id: Optional[str] = Query(None, description="Filter to a single user's category breakdown"),
     limit: int = Query(20, description="Maximum number of individuals to return"),
 ):
     """
@@ -285,25 +289,90 @@ async def get_category_by_individual(
         end_date = date.today()
     if not start_date:
         start_date = end_date - timedelta(days=30)
-    
-    # Build WHERE clauses
+
+    # When filtering by a single user, use document categories from workflow:
+    # Documents -> csr_inbox_states -> csr_inbox_state_categories -> catalog_categories (no orders/order_skus).
+    if assignee_id:
+        d_where_clauses = [
+            f"d.document_created_at >= '{start_date}'",
+            f"d.document_created_at < '{end_date + timedelta(days=1)}'",
+            "d.state NOT IN ('new')",
+        ]
+        if ai_intake_only:
+            d_where_clauses.append("d.is_ai_intake_enabled = true")
+        if supplier_id:
+            d_where_clauses.append(f"d.supplier_id = '{supplier_id}'")
+        if supplier_organization_id:
+            d_where_clauses.append(f"d.supplier_organization_id = '{supplier_organization_id}'")
+        d_where_sql = " AND ".join(d_where_clauses)
+        # Narrow last_access to states this user has accessed (reduces window scope).
+        query_user = f"""
+            WITH states_for_user AS (
+                SELECT DISTINCT a.csr_inbox_state_id
+                FROM workflow.csr_inbox_state_accesses a
+                JOIN workflow.users u ON a.user_id = u.id
+                WHERE u.external_id = '{assignee_id}'
+            ),
+            last_access AS (
+                SELECT
+                    a.csr_inbox_state_id,
+                    u.external_id AS user_external_id,
+                    ROW_NUMBER() OVER (PARTITION BY a.csr_inbox_state_id ORDER BY a.last_accessed_at DESC) AS rn
+                FROM workflow.csr_inbox_state_accesses a
+                JOIN workflow.users u ON a.user_id = u.id
+                WHERE a.csr_inbox_state_id IN (SELECT csr_inbox_state_id FROM states_for_user)
+            ),
+            docs_for_user AS (
+                SELECT d.intake_document_id, s.id AS csr_inbox_state_id
+                FROM analytics.intake_documents d
+                JOIN workflow.csr_inbox_states s ON d.intake_document_id = s.external_id
+                JOIN last_access la ON s.id = la.csr_inbox_state_id AND la.rn = 1
+                WHERE la.user_external_id = '{assignee_id}'
+                  AND {d_where_sql}
+            ),
+            category_counts AS (
+                SELECT COALESCE(cat.name, 'Uncategorized') AS category, COUNT(DISTINCT df.intake_document_id) AS count
+                FROM docs_for_user df
+                LEFT JOIN workflow.csr_inbox_state_categories state_cat ON df.csr_inbox_state_id = state_cat.csr_inbox_state_id
+                LEFT JOIN workflow.catalog_categories cat ON state_cat.catalog_category_id = cat.id
+                GROUP BY COALESCE(cat.name, 'Uncategorized')
+            )
+            SELECT category, count,
+                   (SELECT first_name || ' ' || last_name FROM workflow.users WHERE external_id = '{assignee_id}' LIMIT 1) AS user_name
+            FROM category_counts ORDER BY count DESC
+        """
+        results = execute_query(query_user)
+        total = sum(row.get("count", 0) for row in results)
+        user_name = "Unknown"
+        if results and results[0].get("user_name"):
+            user_name = results[0]["user_name"]
+        categories = [
+            CategoryByIndividual(
+                user_id=assignee_id,
+                user_name=user_name,
+                category=row.get("category", "Uncategorized"),
+                count=row.get("count", 0),
+                percentage=round(row.get("count", 0) * 100.0 / total, 2) if total > 0 else 0,
+                supplier_id=None,
+            )
+            for row in results
+        ]
+        return CategoryByIndividualResponse(data=categories)
+
+    # No assignee_id: category breakdown by orders.assignee_id (existing behavior)
     where_clauses = [
         f"o.created_at >= '{start_date}'",
         f"o.created_at < '{end_date + timedelta(days=1)}'",
         "o.assignee_id IS NOT NULL",
     ]
-    
     if ai_intake_only:
         where_clauses.append("s.ai_intake_enabled = true")
-    
     if supplier_id:
         where_clauses.append(f"o.supplier_id = '{supplier_id}'")
-    
     if supplier_organization_id:
         where_clauses.append(f"o.supplier_organization_id = '{supplier_organization_id}'")
-    
     where_sql = " AND ".join(where_clauses)
-    
+
     query = f"""
         WITH individual_totals AS (
             SELECT 
@@ -343,9 +412,9 @@ async def get_category_by_individual(
         JOIN individual_totals it ON cc.user_id = it.user_id AND cc.supplier_id = it.supplier_id
         ORDER BY cc.user_name, cc.count DESC
     """
-    
+
     results = execute_query(query)
-    
+
     categories = [
         CategoryByIndividual(
             user_id=row["user_id"],
@@ -357,7 +426,7 @@ async def get_category_by_individual(
         )
         for row in results
     ]
-    
+
     return CategoryByIndividualResponse(data=categories)
 
 

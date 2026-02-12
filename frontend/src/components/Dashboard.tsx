@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { subDays } from 'date-fns';
 import type { FilterState } from '../types';
 import { useSuppliers, useSupplierOrganizations, useAiEnabledCount } from '../hooks/useMetrics';
@@ -11,6 +11,8 @@ import { VpnReminderBanner } from './VpnReminderBanner';
 
 // Check if running in static data mode
 const STATIC_MODE = import.meta.env.VITE_STATIC_DATA === 'true';
+// External sharing build: hide Accuracy card (not ready for external use)
+const EXTERNAL_SHARING = import.meta.env.VITE_EXTERNAL_SHARING === 'true';
 
 export const Dashboard: React.FC = () => {
   const [filters, setFilters] = useState<FilterState>({
@@ -20,6 +22,29 @@ export const Dashboard: React.FC = () => {
     supplierId: null,
     supplierOrganizationId: null,
   });
+
+  // In static mode, default date range to exported data so graphs show data immediately
+  useEffect(() => {
+    if (!STATIC_MODE) return;
+    fetch('/data/metadata.json')
+      .then((r) => r.ok ? r.json() : null)
+      .then((meta: { date_range?: { start_date?: string; end_date?: string } } | null) => {
+        const start = meta?.date_range?.start_date;
+        const end = meta?.date_range?.end_date;
+        if (start && end) {
+          try {
+            const startDate = new Date(start + 'T00:00:00');
+            const endDate = new Date(end + 'T00:00:00');
+            if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+              setFilters((prev) => ({ ...prev, startDate, endDate }));
+            }
+          } catch (_) {
+            // keep default range
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const { data: suppliersData, isLoading: suppliersLoading } = useSuppliers(
     filters.aiIntakeOnly,
@@ -74,8 +99,8 @@ export const Dashboard: React.FC = () => {
           isLoadingOrganizations={organizationsLoading}
         />
 
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        {/* Metrics Grid: 3 columns in external sharing (no Accuracy), 4 otherwise */}
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 ${EXTERNAL_SHARING ? 'xl:grid-cols-3' : 'xl:grid-cols-4'}`}>
           {/* Volume - Green */}
           <VolumeMetrics filters={filters} />
 
@@ -85,8 +110,8 @@ export const Dashboard: React.FC = () => {
           {/* Cycle Time - Red */}
           <CycleTimeMetrics filters={filters} />
 
-          {/* Accuracy - Blue */}
-          <AccuracyMetrics filters={filters} />
+          {/* Accuracy - Blue (hidden in external sharing build) */}
+          {!EXTERNAL_SHARING && <AccuracyMetrics filters={filters} />}
         </div>
 
         {/* Footer */}

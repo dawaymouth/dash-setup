@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   LineChart,
   Line,
@@ -15,6 +15,7 @@ import {
   useDocumentAccuracy,
   useFieldAccuracyTrend,
 } from '../hooks/useMetrics';
+import { fetchStaticMetadata } from '../api';
 import { Modal } from './Modal';
 import { InfoButton } from './InfoButton';
 import { AccuracyCalculations } from './calculationDocs';
@@ -82,18 +83,33 @@ const calculateLinearRegression = (data: Array<{date: string; accuracy_pct: numb
   }));
 };
 
+const STATIC_MODE = import.meta.env.VITE_STATIC_DATA === 'true';
+
 export const AccuracyMetrics: React.FC<AccuracyMetricsProps> = ({ filters }) => {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [trendTimeWindow, setTrendTimeWindow] = useState<30 | 60 | 90 | 180 | 365>(30);
+  const [staticExportEndDate, setStaticExportEndDate] = useState<Date | null>(null);
 
   const { data: fieldAccuracyData, isLoading: fieldLoading } =
     usePerFieldAccuracy(filters);
   const { data: docAccuracyData, isLoading: docLoading } =
     useDocumentAccuracy(filters);
 
-  // Calculate trend date range (independent of main dashboard filters)
-  // Memoize to prevent infinite request loop from new Date objects on every render
-  const trendEndDate = useMemo(() => new Date(), []);
+  useEffect(() => {
+    if (STATIC_MODE) {
+      fetchStaticMetadata().then((meta) => {
+        const end = meta?.date_range?.end_date;
+        if (end) setStaticExportEndDate(new Date(end + 'T00:00:00'));
+      });
+    }
+  }, []);
+
+  // In static mode use export end date so chart aligns with export; else use today (stable ref)
+  const todayRef = useRef(new Date());
+  const trendEndDate = useMemo(() => {
+    if (STATIC_MODE && staticExportEndDate) return staticExportEndDate;
+    return todayRef.current;
+  }, [staticExportEndDate]);
   const trendStartDate = useMemo(
     () => subDays(trendEndDate, trendTimeWindow),
     [trendEndDate, trendTimeWindow]
