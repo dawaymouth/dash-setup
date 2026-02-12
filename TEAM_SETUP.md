@@ -291,6 +291,34 @@ git stash pop
    ./setup.sh
    ```
 
+### SSL Certificate / pip Install Fails
+
+**Symptom:** `CERTIFICATE_VERIFY_FAILED` during setup, or errors involving `puccinialin`/`pydantic-core` build
+
+**Cause:** Python from python.org on macOS does not use system certificates by default.
+
+**Solutions:**
+
+1. **Re-run setup** (the script now fixes certs automatically):
+   ```bash
+   rm -rf backend/venv
+   ./setup.sh
+   ```
+
+2. **Manual certificate fix** (if setup still fails):
+   ```bash
+   open "/Applications/Python 3.13/Install Certificates.command"
+   ```
+   (Adjust the version in the path if you use a different Python version.) Then retry `./setup.sh`.
+
+3. **Use Homebrew Python** (handles certificates better):
+   ```bash
+   brew install python@3.13
+   # Ensure python3 points to Homebrew: brew link python@3.13
+   rm -rf backend/venv
+   ./setup.sh
+   ```
+
 ---
 
 ## Scripts Reference

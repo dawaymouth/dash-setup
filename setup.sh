@@ -96,7 +96,9 @@ source venv/bin/activate
 
 # Install Python dependencies
 print_info "Installing Python dependencies..."
-pip install --upgrade pip --quiet
+pip install --upgrade pip certifi --quiet
+export SSL_CERT_FILE=$(python3 -c "import certifi; print(certifi.where())")
+export REQUESTS_CA_BUNDLE=$SSL_CERT_FILE
 pip install -r requirements.txt --quiet
 print_success "Python dependencies installed"
 
