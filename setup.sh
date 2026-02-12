@@ -56,15 +56,29 @@ else
     print_success "Homebrew found"
 fi
 
-# Check for Python 3
-if ! command -v python3 &> /dev/null; then
-    print_warning "Python 3 not found. Installing Python..."
-    brew install python@3.13
-    print_success "Python installed"
-else
-    PYTHON_VERSION=$(python3 --version | cut -d' ' -f2)
-    print_success "Python found (version $PYTHON_VERSION)"
+# Find compatible Python (3.10-3.13; pydantic-core does not support 3.14+)
+PYTHON_CMD=""
+for py in python3.13 python3.12 python3.11 python3.10 python3; do
+    if command -v "$py" &> /dev/null; then
+        VER=$("$py" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null)
+        if [[ "$VER" == 3.1[0-3] ]]; then
+            PYTHON_CMD="$py"
+            break
+        fi
+    fi
+done
+if [ -z "$PYTHON_CMD" ]; then
+    if ! command -v python3 &> /dev/null; then
+        print_warning "Python 3 not found. Installing Python 3.13..."
+        brew install python@3.13
+        PYTHON_CMD="python3"
+    else
+        print_error "Python 3.14+ is not supported (pydantic-core incompatibility)."
+        print_error "Please install Python 3.10-3.13: brew install python@3.13"
+        exit 1
+    fi
 fi
+print_success "Python found (version $($PYTHON_CMD --version))"
 
 # Check for Node.js
 if ! command -v node &> /dev/null; then
@@ -93,7 +107,7 @@ cd backend
 # Create virtual environment if it doesn't exist
 if [ ! -d "venv" ]; then
     print_info "Creating Python virtual environment..."
-    python3 -m venv venv
+    $PYTHON_CMD -m venv venv
     print_success "Virtual environment created"
 else
     print_success "Virtual environment already exists"

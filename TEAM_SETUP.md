@@ -29,7 +29,7 @@ Before you begin, make sure you have:
 - [ ] Git installed (check with `git --version`)
 - [ ] 5 minutes of your time
 
-**Note:** The setup script will automatically install Python and Node.js if needed.
+**Note:** The setup script will automatically install Python and Node.js if needed. Python 3.10–3.13 is required; Python 3.14+ is not yet supported by pydantic.
 
 ---
 
@@ -326,6 +326,20 @@ git stash pop
    rm -rf backend/venv
    ./setup.sh
    ```
+
+### Python 3.14 Not Supported
+
+**Symptom:** `ForwardRef._evaluate() missing 1 required keyword-only argument: 'recursive_guard'` or build errors with pydantic-core
+
+**Cause:** Python 3.14 changed internal APIs. pydantic-core does not support Python 3.14 yet.
+
+**Solution:** Install Python 3.13 and let the setup script use it:
+   ```bash
+   brew install python@3.13
+   rm -rf backend/venv
+   ./setup.sh
+   ```
+   The setup script will prefer python3.13 over python3.14 if both are installed.
 
 ---
 
