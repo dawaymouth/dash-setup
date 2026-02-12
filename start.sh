@@ -122,8 +122,10 @@ if [ ! -f "backend/.env" ]; then
     exit 1
 fi
 
-# Load environment variables to check connection
-source backend/.env 2>/dev/null || true
+# Load environment variables to check connection (set +e: .env may have special chars)
+set +e
+source backend/.env 2>/dev/null
+set -e
 
 # Check VPN connection (by trying to reach Redshift host)
 if [ -n "$REDSHIFT_HOST" ]; then

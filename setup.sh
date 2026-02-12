@@ -150,14 +150,15 @@ if [ ! -f ".env" ]; then
     read -sp "Redshift Password: " REDSHIFT_PASSWORD
     echo ""
     
-    # Create .env file
+    # Create .env file (quote password to handle special chars like ; > $)
+    REDSHIFT_PASSWORD_ESC=$(printf '%q' "$REDSHIFT_PASSWORD")
     cat > .env << EOF
 # Redshift Connection Settings
 REDSHIFT_HOST=$REDSHIFT_HOST
 REDSHIFT_PORT=$REDSHIFT_PORT
 REDSHIFT_DATABASE=$REDSHIFT_DATABASE
 REDSHIFT_USER=$REDSHIFT_USER
-REDSHIFT_PASSWORD=$REDSHIFT_PASSWORD
+REDSHIFT_PASSWORD=$REDSHIFT_PASSWORD_ESC
 EOF
     
     print_success ".env file created"
