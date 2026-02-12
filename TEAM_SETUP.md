@@ -6,8 +6,8 @@ Welcome! This guide will help you get the AI Intake Dashboard running on your Ma
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/dawaymouth/dash-setup.git ai-intake-dashboard
-cd ai-intake-dashboard
+git clone https://github.com/dawaymouth/dash-setup.git new-dash
+cd new-dash
 
 # 2. Run setup (one time only)
 ./setup.sh
