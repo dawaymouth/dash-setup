@@ -77,14 +77,16 @@ else
 fi
 
 if [ "$SHOULD_CHECK_UPDATE" = true ]; then
-    print_info "Checking for updates..."
-    
-    # Fetch latest (silently)
-    git fetch origin main --quiet 2>/dev/null || git fetch origin master --quiet 2>/dev/null || true
-    
-    # Compare versions
-    LOCAL=$(git rev-parse HEAD 2>/dev/null)
-    REMOTE=$(git rev-parse @{u} 2>/dev/null || echo "")
+    # Skip update check if not in a git repo (avoids set -e exit)
+    if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        print_info "Checking for updates..."
+        
+        # Fetch latest (silently)
+        git fetch origin main --quiet 2>/dev/null || git fetch origin master --quiet 2>/dev/null || true
+        
+        # Compare versions
+        LOCAL=$(git rev-parse HEAD 2>/dev/null) || true
+        REMOTE=$(git rev-parse @{u} 2>/dev/null || echo "")
     
     if [ -n "$REMOTE" ] && [ "$LOCAL" != "$REMOTE" ]; then
         REMOTE_VERSION=$(git show origin/HEAD:VERSION 2>/dev/null || echo "unknown")
@@ -110,6 +112,7 @@ if [ "$SHOULD_CHECK_UPDATE" = true ]; then
             print_info "Run './update.sh' to update, then restart"
             exit 0
         fi
+    fi
     fi
     
     # Update last check timestamp
