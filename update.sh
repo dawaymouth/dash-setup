@@ -178,12 +178,12 @@ echo ""
 
 if [ "$NEEDS_RESTART" = true ]; then
     print_warning "Dependencies were updated. Please restart the dashboard:"
-    echo "  ${BLUE}./stop.sh${NC}"
-    echo "  ${BLUE}./start.sh${NC}"
+    echo -e "  ${BLUE}./stop.sh${NC}"
+    echo -e "  ${BLUE}./start.sh${NC}"
 else
     print_info "Restart the dashboard to use the new version:"
-    echo "  ${BLUE}./stop.sh${NC}"
-    echo "  ${BLUE}./start.sh${NC}"
+    echo -e "  ${BLUE}./stop.sh${NC}"
+    echo -e "  ${BLUE}./start.sh${NC}"
 fi
 
 echo ""
