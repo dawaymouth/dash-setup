@@ -24,6 +24,8 @@ The dashboard will open automatically in your browser!
 
 **Need help?** See the comprehensive [Team Setup Guide](TEAM_SETUP.md) for troubleshooting and detailed instructions.
 
+**Prefer multiple dashboards?** Use the [Dashboard Hub](https://github.com/dawaymouth/dashboard-hub) to browse and launch this and other team dashboards from one place.
+
 ### Daily Usage
 
 ```bash

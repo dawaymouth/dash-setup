@@ -18,6 +18,8 @@ cd new-dash
 
 That's it! The dashboard will open automatically in your browser.
 
+**Using the Dashboard Hub instead?** You can also get this dashboard via the [Dashboard Hub](https://github.com/dawaymouth/dashboard-hub): clone the hub, run `./sync.sh`, then run `./setup.sh` from `dashboards/ai-intake` before launching with `./start.sh`.
+
 ---
 
 ## Prerequisites
