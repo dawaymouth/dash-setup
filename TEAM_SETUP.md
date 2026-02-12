@@ -271,6 +271,25 @@ git stash pop
    ./start.sh
    ```
 
+### Start Script Exits Immediately
+
+**Symptom:** `./start.sh` prints the header then exits with no error
+
+**Solutions:**
+
+1. **Run from project root:** Ensure you're in the dashboard directory (where `backend/`, `frontend/`, and `start.sh` are):
+   ```bash
+   cd /path/to/ai-intake-dashboard
+   ./start.sh
+   ```
+
+2. **Check backend/.env exists:** The script requires `backend/.env` with Redshift credentials. Run `./setup.sh` first if needed.
+
+3. **Debug mode:** To see where the script stops:
+   ```bash
+   bash -x ./start.sh
+   ```
+
 ### Setup Script Fails
 
 **Symptom:** Error during `./setup.sh`

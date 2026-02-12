@@ -77,45 +77,41 @@ else
 fi
 
 if [ "$SHOULD_CHECK_UPDATE" = true ]; then
-    # Skip update check if not in a git repo (avoids set -e exit)
-    if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        print_info "Checking for updates..."
-        
-        # Fetch latest (silently)
+    # Run git operations in subshell with set +e - never let failures exit main script
+    TMP_UPDATE=$(mktemp 2>/dev/null || echo "/tmp/dash-update-$$")
+    (
+        set +e
+        git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
         git fetch origin main --quiet 2>/dev/null || git fetch origin master --quiet 2>/dev/null || true
-        
-        # Compare versions
         LOCAL=$(git rev-parse HEAD 2>/dev/null) || true
         REMOTE=$(git rev-parse @{u} 2>/dev/null || echo "")
-    
-    if [ -n "$REMOTE" ] && [ "$LOCAL" != "$REMOTE" ]; then
+        [ -z "$REMOTE" ] || [ "$LOCAL" = "$REMOTE" ] && exit 0
         REMOTE_VERSION=$(git show origin/HEAD:VERSION 2>/dev/null || echo "unknown")
-        
-        # Show update notification
+        echo "$REMOTE_VERSION" > "$TMP_UPDATE"
+    ) 2>/dev/null || true
+    
+    if [ -s "$TMP_UPDATE" ]; then
+        REMOTE_VERSION=$(cat "$TMP_UPDATE")
+        rm -f "$TMP_UPDATE"
+        print_info "Checking for updates..."
         echo ""
         echo -e "${CYAN}╔══════════════════════════════════════════════════════╗${NC}"
         echo -e "${CYAN}║  📦 Update Available: v${CURRENT_VERSION} → v${REMOTE_VERSION}${NC}"
         echo -e "${CYAN}╟──────────────────────────────────────────────────────╢${NC}"
-        
-        # Show a few recent changes
-        CHANGES=$(git log --oneline --decorate HEAD..@{u} | head -3 | sed 's/^/║  • /')
-        echo -e "${CYAN}${CHANGES}${NC}"
-        
+        CHANGES=$(git log --oneline --decorate HEAD..@{u} 2>/dev/null | head -3 | sed 's/^/║  • /') || true
+        [ -n "$CHANGES" ] && echo -e "${CYAN}${CHANGES}${NC}"
         echo -e "${CYAN}╟──────────────────────────────────────────────────────╢${NC}"
         echo -e "${CYAN}║  To update: ./update.sh                              ║${NC}"
         echo -e "${CYAN}╚══════════════════════════════════════════════════════╝${NC}"
         echo ""
-        
-        read -p "Continue with current version? [y/N] " -n 1 -r
+        read -p "Continue with current version? [y/N] " -n 1 -r || REPLY="y"
         echo ""
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
             print_info "Run './update.sh' to update, then restart"
             exit 0
         fi
     fi
-    fi
-    
-    # Update last check timestamp
+    rm -f "$TMP_UPDATE"
     touch "$LAST_UPDATE_CHECK"
 fi
 
