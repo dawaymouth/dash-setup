@@ -180,6 +180,37 @@ function filterBySupplier<T extends { supplier_id?: string }>(data: T[], supplie
   return data.filter((item: T) => item.supplier_id === supplierId);
 }
 
+// State labels for Document Outcomes (matches backend STATE_LABELS)
+const STATE_LABELS: Record<string, string> = {
+  assigned: 'Assigned',
+  assigned_other: 'Assigned (other)',
+  attached_to_existing: 'Attached to existing order',
+  discarded: 'Discarded',
+  emailed: 'Emailed',
+  generated_new: 'Generated new order',
+  pushed: 'Pushed',
+  split: 'Split',
+};
+
+// Aggregate state distribution by state (export data has per-supplier rows; API returns aggregated)
+function aggregateStateDistributionByState(
+  data: Array<{ state: string; label: string; count: number; percentage: number; supplier_id?: string }>
+): Array<{ state: string; label: string; count: number; percentage: number }> {
+  const byState = new Map<string, number>();
+  for (const row of data) {
+    byState.set(row.state, (byState.get(row.state) || 0) + row.count);
+  }
+  const total = Array.from(byState.values()).reduce((s, c) => s + c, 0);
+  return Array.from(byState.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([state, count]) => ({
+      state,
+      label: STATE_LABELS[state] ?? state.charAt(0).toUpperCase() + state.slice(1).replace(/_/g, ' '),
+      count,
+      percentage: total > 0 ? Math.round((count * 10000) / total) / 100 : 0,
+    }));
+}
+
 // Aggregate volume data: sum counts by date
 function aggregateVolumeByDate(data: Array<{date: string, count: number, supplier_id?: string}>): Array<{date: string, count: number}> {
   const byDate = new Map<string, number>();
@@ -581,8 +612,8 @@ export const fetchStateDistributionByUser = async (
     if (!userDist?.data?.length) return { data: [], total: 0 };
     const rawData = userDist.data as Array<{ state: string; label: string; count: number; percentage: number; supplier_id?: string }>;
     const filtered = filterBySupplier(rawData, staticData.currentSupplierId);
-    const total = filtered.reduce((s, r) => s + r.count, 0);
-    const data = total > 0 ? filtered.map((r) => ({ ...r, percentage: Math.round((r.count * 10000) / total) / 100 })) : filtered;
+    const data = aggregateStateDistributionByState(filtered);
+    const total = data.reduce((s, r) => s + r.count, 0);
     return { data, total };
   }
   const params = { ...buildParams(filters), assignee_id: userId };
