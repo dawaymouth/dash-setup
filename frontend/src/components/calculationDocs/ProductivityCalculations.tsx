@@ -23,7 +23,8 @@ export const ProductivityCalculations: React.FC = () => (
     <div>
       <h4 className="font-semibold text-gray-900 mb-1">Active Individuals</h4>
       <p className="text-gray-600">
-        Unique count of users who processed at least one document in the selected date range.
+        Unique count of users who accessed (touched) at least one document in the selected date range.
+        Includes any user who has an access record for a document, not just the last person to complete it.
       </p>
     </div>
 

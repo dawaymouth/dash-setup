@@ -601,10 +601,11 @@ export const fetchProductivityByIndividual = async (
     const rawData = (staticData.organization?.productivity?.by_individual?.data || []) as Array<{user_id: string, user_name: string, total_processed: number, avg_per_day: number, median_minutes?: number | null, supplier_id?: string}>;
     const filtered = filterBySupplier(rawData, staticData.currentSupplierId);
     const aggregated = aggregateProductivityByUser(filtered);
+    const uniqueIndividuals = staticData.organization?.productivity?.by_individual?.unique_individuals;
     return {
       data: aggregated,
       total_processed: aggregated.reduce((s, r) => s + r.total_processed, 0),
-      unique_individuals: aggregated.length
+      unique_individuals: typeof uniqueIndividuals === 'number' ? uniqueIndividuals : aggregated.length
     };
   }
   
@@ -615,7 +616,7 @@ export const fetchProductivityByIndividual = async (
   return {
     data: aggregated,
     total_processed: aggregated.reduce((s: number, r: {total_processed: number}) => s + r.total_processed, 0),
-    unique_individuals: aggregated.length
+    unique_individuals: data.unique_individuals ?? aggregated.length
   };
 };
 
@@ -628,10 +629,11 @@ export const fetchDailyAverageProductivity = async (
     const rawData = (staticData.organization?.productivity?.daily_average?.data || []) as Array<{user_id: string, user_name: string, total_processed: number, avg_per_day: number, median_minutes?: number | null, supplier_id?: string}>;
     const filtered = filterBySupplier(rawData, staticData.currentSupplierId);
     const aggregated = aggregateProductivityByUser(filtered);
+    const uniqueIndividuals = staticData.organization?.productivity?.daily_average?.unique_individuals;
     return {
       data: aggregated,
       total_processed: aggregated.reduce((s, r) => s + r.total_processed, 0),
-      unique_individuals: aggregated.length
+      unique_individuals: typeof uniqueIndividuals === 'number' ? uniqueIndividuals : aggregated.length
     };
   }
   
@@ -642,7 +644,7 @@ export const fetchDailyAverageProductivity = async (
   return {
     data: aggregated,
     total_processed: aggregated.reduce((s: number, r: {total_processed: number}) => s + r.total_processed, 0),
-    unique_individuals: aggregated.length
+    unique_individuals: data.unique_individuals ?? aggregated.length
   };
 };
 
@@ -694,10 +696,12 @@ export const fetchProcessingTimeByIndividual = async (
                  || staticData.organization?.productivity?.by_individual?.data || []) as Array<{user_id: string, user_name: string, total_processed: number, avg_per_day: number, median_minutes?: number | null, supplier_id?: string}>;
     const filtered = filterBySupplier(rawData, staticData.currentSupplierId);
     const aggregated = aggregateProductivityByUser(filtered);
+    const uniqueIndividuals = staticData.organization?.productivity?.by_individual_processing_time?.unique_individuals
+      ?? staticData.organization?.productivity?.by_individual?.unique_individuals;
     return {
       data: aggregated,
       total_processed: aggregated.reduce((s, r) => s + r.total_processed, 0),
-      unique_individuals: aggregated.length
+      unique_individuals: typeof uniqueIndividuals === 'number' ? uniqueIndividuals : aggregated.length
     };
   }
   
@@ -708,7 +712,7 @@ export const fetchProcessingTimeByIndividual = async (
   return {
     data: aggregated,
     total_processed: aggregated.reduce((s: number, r: {total_processed: number}) => s + r.total_processed, 0),
-    unique_individuals: aggregated.length
+    unique_individuals: data.unique_individuals ?? aggregated.length
   };
 };
 

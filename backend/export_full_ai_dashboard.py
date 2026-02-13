@@ -520,6 +520,7 @@ def assemble_one_org_from_bulk(
     cycle_state_by_supplier,
     cycle_state_by_user,
     prod_by_ind, prod_daily, prod_proc_time, prod_cat,
+    unique_individuals,
     acc_per_field_list, acc_per_field_overall, acc_doc_org, acc_trend_list, acc_trend_overall, acc_field_trend_list, acc_field_trend_overall,
 ):
     """Build one org's export payload from pre-grouped bulk data (no DB). Same shape as export_one_org_db."""
@@ -545,10 +546,11 @@ def assemble_one_org_from_bulk(
         "processing": {"data": cycle_proc_data or [], "overall_avg_minutes": cycle_proc_overall or 0, "metric_type": "processing"},
         "state_distribution": cycle_state_dist or {"data": [], "total": 0},
     }
+    unique_count = unique_individuals if unique_individuals is not None else 0
     productivity = {
-        "by_individual": {"data": prod_by_ind or []},
-        "daily_average": {"data": prod_daily or []},
-        "by_individual_processing_time": {"data": prod_proc_time or []},
+        "by_individual": {"data": prod_by_ind or [], "unique_individuals": unique_count},
+        "daily_average": {"data": prod_daily or [], "unique_individuals": unique_count},
+        "by_individual_processing_time": {"data": prod_proc_time or [], "unique_individuals": unique_count},
         "category_breakdown": {"data": prod_cat or []},
         "state_distribution_by_user": cycle_state_by_user or {},
     }
@@ -722,6 +724,8 @@ def main():
     cycle_proc_data, cycle_proc_overall = eq.query_cycle_processing_bulk(start_date, end_date, org_ids)
     cycle_state_rows = eq.query_cycle_state_distribution_bulk(start_date, end_date, org_ids)
     cycle_state_by_user_rows = eq.query_cycle_state_distribution_by_user_bulk(start_date, end_date, org_ids)
+    active_individuals_by_org = eq.query_active_individuals_bulk(start_date, end_date, org_ids)
+    active_individuals_all = eq.query_active_individuals_for_orgs(start_date, end_date, org_ids)
     prod_by_ind_rows = eq.query_productivity_by_individual_bulk(start_date, end_date, org_ids)
     prod_daily_rows = eq.query_productivity_daily_average_bulk(start_date, end_date, org_ids)
     prod_proc_time_rows = eq.query_productivity_by_individual_processing_time_bulk(start_date, end_date, org_ids)
@@ -783,6 +787,7 @@ def main():
             prod_daily_by_org.get(oid, []),
             prod_proc_time_by_org.get(oid, []),
             prod_cat_by_org.get(oid, []),
+            active_individuals_by_org.get(oid, 0),
             acc_per_field_by_org.get(oid, []),
             acc_per_field_overall.get(oid, 0),
             acc_doc_by_org.get(oid),
@@ -837,6 +842,7 @@ def main():
         merged_prod_daily,
         merged_prod_proc_time,
         merged_prod_cat,
+        active_individuals_all,
         merged_acc_per_field,
         merged_acc_per_field_overall,
         merged_acc_doc,

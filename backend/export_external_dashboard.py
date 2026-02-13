@@ -146,6 +146,7 @@ def export_one_org_via_bulk(supplier_org_id, org_name, start_date, end_date):
     cycle_proc_data, cycle_proc_overall = eq.query_cycle_processing_bulk(start_date, end_date, org_ids)
     cycle_state_rows = eq.query_cycle_state_distribution_bulk(start_date, end_date, org_ids)
     cycle_state_by_user_rows = eq.query_cycle_state_distribution_by_user_bulk(start_date, end_date, org_ids)
+    active_individuals_by_org = eq.query_active_individuals_bulk(start_date, end_date, org_ids)
     prod_by_ind_rows = eq.query_productivity_by_individual_bulk(start_date, end_date, org_ids)
     prod_daily_rows = eq.query_productivity_daily_average_bulk(start_date, end_date, org_ids)
     prod_proc_time_rows = eq.query_productivity_by_individual_processing_time_bulk(start_date, end_date, org_ids)
@@ -183,6 +184,7 @@ def export_one_org_via_bulk(supplier_org_id, org_name, start_date, end_date):
     cycle_state_by_supplier_by_org = group_cycle_state_distribution_by_supplier(cycle_state_rows)
     cycle_state_by_user_by_org = group_cycle_state_distribution_by_user(cycle_state_by_user_rows)
 
+    unique_individuals = active_individuals_by_org.get(supplier_org_id, 0)
     slice_data = assemble_one_org_from_bulk(
         supplier_org_id,
         org_name,
@@ -204,6 +206,7 @@ def export_one_org_via_bulk(supplier_org_id, org_name, start_date, end_date):
         prod_daily_by_org.get(supplier_org_id, []),
         prod_proc_time_by_org.get(supplier_org_id, []),
         prod_cat_by_org.get(supplier_org_id, []),
+        unique_individuals,
         acc_per_field_by_org.get(supplier_org_id, []),
         acc_per_field_overall.get(supplier_org_id, 0),
         acc_doc_by_org.get(supplier_org_id),

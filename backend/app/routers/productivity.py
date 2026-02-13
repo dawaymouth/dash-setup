@@ -19,6 +19,24 @@ from app.models import (
 router = APIRouter()
 
 
+def _count_active_individuals(where_sql: str) -> int:
+    """
+    Count distinct users who accessed at least one non-new document.
+    Uses any access record (not just last accessor) - aligns with "Active Individuals"
+    as users who touched/worked on documents.
+    """
+    query = f"""
+        SELECT COUNT(DISTINCT u.external_id)::int as active_individuals
+        FROM workflow.csr_inbox_state_accesses a
+        JOIN workflow.csr_inbox_states s ON s.id = a.csr_inbox_state_id
+        JOIN analytics.intake_documents d ON d.intake_document_id = s.external_id
+        JOIN workflow.users u ON u.id = a.user_id
+        WHERE {where_sql}
+    """
+    rows = execute_query(query)
+    return rows[0]["active_individuals"] if rows else 0
+
+
 @router.get("/by-individual", response_model=ProductivityResponse)
 async def get_productivity_by_individual(
     start_date: Optional[date] = Query(None, description="Start date (defaults to 30 days ago)"),
@@ -131,11 +149,12 @@ async def get_productivity_by_individual(
     ]
     
     total_processed = sum(ind.total_processed for ind in individuals)
+    unique_individuals = _count_active_individuals(where_sql)
     
     return ProductivityResponse(
         data=individuals,
         total_processed=total_processed,
-        unique_individuals=len(individuals)
+        unique_individuals=unique_individuals
     )
 
 
@@ -261,11 +280,12 @@ async def get_daily_average_productivity(
     ]
     
     total_processed = sum(ind.total_processed for ind in individuals)
+    unique_individuals = _count_active_individuals(where_sql)
     
     return ProductivityResponse(
         data=individuals,
         total_processed=total_processed,
-        unique_individuals=len(individuals)
+        unique_individuals=unique_individuals
     )
 
 
@@ -527,9 +547,10 @@ async def get_processing_time_by_individual(
     ]
     
     total_processed = sum(p.total_processed for p in productivity)
+    unique_individuals = _count_active_individuals(where_sql)
     
     return ProductivityResponse(
         data=productivity,
         total_processed=total_processed,
-        unique_individuals=len(productivity)
+        unique_individuals=unique_individuals
     )

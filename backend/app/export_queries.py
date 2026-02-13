@@ -658,6 +658,48 @@ def _productivity_where_bulk(start_date: date, end_date: date, org_ids: list[str
     return f"d.document_created_at >= '{start_date}' AND d.document_created_at < '{end_date + timedelta(days=1)}' AND d.state NOT IN ('new') AND {org_sql} AND d.is_ai_intake_enabled = true"
 
 
+def query_active_individuals_bulk(start_date: date, end_date: date, org_ids: list[str]) -> dict[str, int]:
+    """
+    Count distinct users who accessed at least one non-new document per org.
+    Uses any access record (not just last accessor) - aligns with "Active Individuals".
+    Returns {supplier_organization_id: active_individuals_count}.
+    """
+    if not org_ids:
+        return {}
+    where_sql = _productivity_where_bulk(start_date, end_date, org_ids)
+    query = f"""
+        SELECT d.supplier_organization_id, COUNT(DISTINCT u.external_id)::int as active_individuals
+        FROM workflow.csr_inbox_state_accesses a
+        JOIN workflow.csr_inbox_states s ON s.id = a.csr_inbox_state_id
+        JOIN analytics.intake_documents d ON d.intake_document_id = s.external_id
+        JOIN workflow.users u ON u.id = a.user_id
+        WHERE {where_sql}
+        GROUP BY d.supplier_organization_id
+    """
+    rows = execute_query(query)
+    return {r["supplier_organization_id"]: r["active_individuals"] for r in rows}
+
+
+def query_active_individuals_for_orgs(start_date: date, end_date: date, org_ids: list[str]) -> int:
+    """
+    Count distinct users who accessed at least one non-new document across all given orgs.
+    Used for merged "All Supplier Orgs" slice.
+    """
+    if not org_ids:
+        return 0
+    where_sql = _productivity_where_bulk(start_date, end_date, org_ids)
+    query = f"""
+        SELECT COUNT(DISTINCT u.external_id)::int as active_individuals
+        FROM workflow.csr_inbox_state_accesses a
+        JOIN workflow.csr_inbox_states s ON s.id = a.csr_inbox_state_id
+        JOIN analytics.intake_documents d ON d.intake_document_id = s.external_id
+        JOIN workflow.users u ON u.id = a.user_id
+        WHERE {where_sql}
+    """
+    rows = execute_query(query)
+    return rows[0]["active_individuals"] if rows else 0
+
+
 def query_productivity_by_individual_bulk(start_date: date, end_date: date, org_ids: list[str], limit_per_org: int = 50) -> list[dict]:
     """Bulk: rows with supplier_organization_id, user_id, user_name, supplier_id, total_processed, avg_per_day, median_minutes."""
     if not org_ids:
