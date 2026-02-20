@@ -199,6 +199,22 @@ lsof -ti:5173 | xargs kill -9
 ./start.sh
 ```
 
+### Frontend Fails to Start / Vite Not Found
+
+**Symptom:** Frontend fails when you run `./start.sh`; logs show that `vite` wasn't found (e.g. "vite: command not found" in `frontend.log`).
+
+**Cause:** `start.sh` runs the frontend with `nohup npm run dev`. The background process doesn't get the same PATH as your interactive shell, so `node_modules/.bin` (where vite lives) isn't in PATH and the vite command fails.
+
+**Solution:** The project scripts use `npx vite` so the local install is always used. Ensure you have the latest code:
+
+```bash
+./update.sh
+./stop.sh
+./start.sh
+```
+
+If you're on an older clone and can't update yet, you can fix it locally by editing `frontend/package.json`: change the `dev`, `build`, and `preview` scripts to call vite via `npx` (e.g. `"dev": "npx vite"`).
+
 ### Module Not Found Errors
 
 **Symptom:** Python or Node module errors
