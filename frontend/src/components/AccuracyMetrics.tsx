@@ -90,9 +90,9 @@ export const AccuracyMetrics: React.FC<AccuracyMetricsProps> = ({ filters }) => 
   const [trendTimeWindow, setTrendTimeWindow] = useState<30 | 60 | 90 | 180 | 365>(30);
   const [staticExportEndDate, setStaticExportEndDate] = useState<Date | null>(null);
 
-  const { data: fieldAccuracyData, isLoading: fieldLoading } =
+  const { data: fieldAccuracyData, isLoading: fieldLoading, isError: fieldError } =
     usePerFieldAccuracy(filters);
-  const { data: docAccuracyData, isLoading: docLoading } =
+  const { data: docAccuracyData, isLoading: docLoading, isError: docError } =
     useDocumentAccuracy(filters);
 
   useEffect(() => {
@@ -115,7 +115,7 @@ export const AccuracyMetrics: React.FC<AccuracyMetricsProps> = ({ filters }) => 
     [trendEndDate, trendTimeWindow]
   );
 
-  const { data: fieldTrendData, isLoading: fieldTrendLoading } = useFieldAccuracyTrend(
+  const { data: fieldTrendData, isLoading: fieldTrendLoading, isError: fieldTrendError } = useFieldAccuracyTrend(
     {
       aiIntakeOnly: filters.aiIntakeOnly,
       supplierId: filters.supplierId,
@@ -139,6 +139,15 @@ export const AccuracyMetrics: React.FC<AccuracyMetricsProps> = ({ filters }) => 
   }, [fieldTrendData?.data]);
 
   const isLoading = fieldLoading || docLoading;
+  const hasAccuracyError = docError || fieldError || fieldTrendError;
+  const hasOrgSelected = !!filters.supplierOrganizationId;
+  const showPerFieldPlaceholder = !hasOrgSelected && !fieldLoading;
+  // Per-field API caps range to 31 days; show note when user selected a longer range
+  const selectedRangeDays = Math.round(
+    (filters.endDate.getTime() - filters.startDate.getTime()) / (1000 * 60 * 60 * 24)
+  );
+  const PER_FIELD_MAX_DAYS = 31;
+  const showPerFieldCappedNote = hasOrgSelected && selectedRangeDays > PER_FIELD_MAX_DAYS && fieldAccuracyData;
 
   // Bucket fields by accuracy range
   const bucketedFields = ACCURACY_BUCKETS.map((bucket) => {
@@ -177,18 +186,41 @@ export const AccuracyMetrics: React.FC<AccuracyMetricsProps> = ({ filters }) => 
         </div>
       ) : (
         <>
+          {hasAccuracyError && (
+            <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+              Accuracy data timed out or failed to load. Try narrowing the date range or selecting an organization.
+            </div>
+          )}
           {/* Stats Cards */}
           <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="bg-blue-50 rounded-lg p-4">
               <p className="text-sm text-blue-600 font-medium">
                 Field Accuracy
               </p>
-              <p className="text-3xl font-bold text-blue-700">
-                {(fieldAccuracyData?.overall_accuracy_pct ?? 0).toFixed(1)}%
-              </p>
-              <p className="text-xs text-blue-500 mt-1">
-                {fieldAccuracyData?.total_fields ?? 0} fields tracked
-              </p>
+              {showPerFieldPlaceholder ? (
+                <>
+                  <p className="text-sm text-blue-600 mt-1">
+                    Select an organization to view
+                  </p>
+                  <p className="text-xs text-blue-500 mt-1">
+                    Per-field metrics load only when an org is selected
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-3xl font-bold text-blue-700">
+                    {(fieldAccuracyData?.overall_accuracy_pct ?? 0).toFixed(1)}%
+                  </p>
+                  <p className="text-xs text-blue-500 mt-1">
+                    {fieldAccuracyData?.total_fields ?? 0} fields tracked
+                  </p>
+                  {showPerFieldCappedNote && (
+                    <p className="text-xs text-blue-500 mt-1 italic">
+                      Based on last {PER_FIELD_MAX_DAYS} days (range capped for performance)
+                    </p>
+                  )}
+                </>
+              )}
             </div>
             <div className="bg-green-50 rounded-lg p-4">
               <p className="text-sm text-green-600 font-medium">
@@ -312,6 +344,11 @@ export const AccuracyMetrics: React.FC<AccuracyMetricsProps> = ({ filters }) => 
             <h3 className="text-sm font-medium text-gray-600 mb-3">
               Field Accuracy
             </h3>
+            {showPerFieldPlaceholder ? (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center text-gray-500 text-sm">
+                Select an organization in the filter above to load per-field accuracy.
+              </div>
+            ) : (
             <div className="space-y-4">
               {bucketedFields.map((bucket) => (
                 <div
@@ -351,6 +388,7 @@ export const AccuracyMetrics: React.FC<AccuracyMetricsProps> = ({ filters }) => 
                 </div>
               ))}
             </div>
+            )}
           </div>
         </>
       )}

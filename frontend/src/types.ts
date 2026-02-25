@@ -13,12 +13,18 @@ export interface FaxVolumeResponse {
 }
 
 export interface TimeOfDayDocument {
-  timestamp: string;  // ISO 8601 UTC timestamp
+  timestamp: string;  // ISO 8601 UTC timestamp (legacy)
+  supplier_id?: string;  // For client-side filtering
+}
+
+export interface TimeOfDayBucket {
+  hour: number;  // 0-23 in requested timezone
+  count: number;
   supplier_id?: string;  // For client-side filtering
 }
 
 export interface TimeOfDayVolumeResponse {
-  data: TimeOfDayDocument[];
+  data: TimeOfDayBucket[];
   total: number;
 }
 

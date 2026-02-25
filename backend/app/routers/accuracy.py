@@ -23,6 +23,11 @@ from app.models import (
 
 router = APIRouter()
 
+# Max date range for document-level to avoid timeouts (days).
+DOCUMENT_LEVEL_MAX_DAYS = 30
+# Max date range for trend/field-level-trend when no org selected (days).
+TREND_MAX_DAYS_NO_ORG = 30
+
 
 def build_base_ctes(start_date: date, end_date: date, supplier_filter: str = "", supplier_organization_external_id: Optional[str] = None) -> str:
     """
@@ -51,7 +56,27 @@ def build_base_ctes(start_date: date, end_date: date, supplier_filter: str = "",
     if supplier_organization_external_id:
         org_filter = f" AND so.external_id = '{supplier_organization_external_id}'"
     
+    # When filtering by supplier/ai_intake, restrict to AI intake documents (align with export, shrink scope)
+    end_exclusive = end_date + timedelta(days=1)
+    scope_ai_filter = " AND id.is_ai_intake_enabled = true" if supplier_filter else ""
+    documents_in_scope_cte = f"""
+        documents_in_scope AS (
+            SELECT s.id AS csr_inbox_state_id
+            FROM analytics.intake_documents id
+            JOIN workflow.csr_inbox_states s ON s.external_id = id.intake_document_id
+            {supplier_join}
+            WHERE id.document_created_at >= '{start_date}'
+              AND id.document_created_at < '{end_exclusive}'
+              {scope_ai_filter}
+              {supplier_filter}
+              {org_filter}
+        ),
+    """
+    # IN filter so planner can restrict audit scan to in-scope state_ids (major perf win)
+    in_scope_predicate = " AND a.csr_inbox_state_id IN (SELECT csr_inbox_state_id FROM documents_in_scope)"
+    
     return f"""
+        {documents_in_scope_cte}
         first_values AS (
             SELECT 
                 a.csr_inbox_state_id, 
@@ -70,7 +95,8 @@ def build_base_ctes(start_date: date, end_date: date, supplier_filter: str = "",
             {supplier_join}
             WHERE a.user_id IS NULL
               AND a.created_at >= '{start_date}'
-              AND a.created_at < '{end_date + timedelta(days=1)}'
+              AND a.created_at < '{end_exclusive}'
+              {in_scope_predicate}
               {supplier_filter}
               {org_filter}
         ),
@@ -87,7 +113,8 @@ def build_base_ctes(start_date: date, end_date: date, supplier_filter: str = "",
             JOIN workflow.csr_inbox_states s ON a.csr_inbox_state_id = s.id
             {supplier_join}
             WHERE a.created_at >= '{start_date}'
-              AND a.created_at < '{end_date + timedelta(days=1)}'
+              AND a.created_at < '{end_exclusive}'
+              {in_scope_predicate}
               {supplier_filter}
               {org_filter}
         ),
@@ -201,6 +228,9 @@ async def get_document_accuracy(
         end_date = date.today()
     if not start_date:
         start_date = end_date - timedelta(days=30)
+    # Cap range to avoid timeouts
+    if (end_date - start_date).days > DOCUMENT_LEVEL_MAX_DAYS:
+        start_date = end_date - timedelta(days=DOCUMENT_LEVEL_MAX_DAYS)
     
     # Build supplier filter
     supplier_filter = ""
@@ -262,6 +292,9 @@ async def get_accuracy_trend(
         end_date = date.today()
     if not start_date:
         start_date = end_date - timedelta(days=30)
+    # Cap range when no org selected to avoid timeouts
+    if not supplier_organization_id and (end_date - start_date).days > TREND_MAX_DAYS_NO_ORG:
+        start_date = end_date - timedelta(days=TREND_MAX_DAYS_NO_ORG)
     
     # Build supplier filter
     supplier_filter = ""
@@ -346,6 +379,9 @@ async def get_field_level_accuracy_trend(
         end_date = date.today()
     if not start_date:
         start_date = end_date - timedelta(days=30)
+    # Cap range when no org selected to avoid timeouts
+    if not supplier_organization_id and (end_date - start_date).days > TREND_MAX_DAYS_NO_ORG:
+        start_date = end_date - timedelta(days=TREND_MAX_DAYS_NO_ORG)
     
     # Build supplier filter
     supplier_filter = ""

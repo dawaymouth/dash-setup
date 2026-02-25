@@ -108,29 +108,11 @@ export const VolumeMetrics: React.FC<VolumeMetricsProps> = ({ filters }) => {
     }));
   }, [volumeTrendData?.data]);
 
-  // Transform time-of-day data into bucketed chart data
+  // Transform time-of-day data into bucketed chart data (supports aggregated API and legacy static timestamp list)
   const timeChartData = useMemo(() => {
-    if (!timeData?.data) return [];
+    const data = timeData?.data;
+    if (!data?.length) return [];
 
-    // Initialize all 24 hour buckets
-    const hourBuckets: Record<number, number> = {};
-    for (let i = 0; i < 24; i++) {
-      hourBuckets[i] = 0;
-    }
-
-    // Process each timestamp and convert to local timezone
-    timeData.data.forEach((item) => {
-      // Parse ISO timestamp (comes as UTC from backend)
-      const date = new Date(item.timestamp);
-      
-      // getHours() returns hour in browser's local timezone (0-23)
-      const localHour = date.getHours();
-      
-      // Increment the hour bucket
-      hourBuckets[localHour] += 1;
-    });
-
-    // Helper to format hour in 12-hour format with AM/PM
     const formatHour = (hour: number): string => {
       if (hour === 0) return '12 AM';
       if (hour < 12) return `${hour} AM`;
@@ -138,13 +120,44 @@ export const VolumeMetrics: React.FC<VolumeMetricsProps> = ({ filters }) => {
       return `${hour - 12} PM`;
     };
 
-    // Return all 24 hours in order
+    const hourBuckets: Record<number, number> = {};
+    for (let i = 0; i < 24; i++) hourBuckets[i] = 0;
+
+    const first = data[0] as { hour?: number; count?: number; timestamp?: string; supplier_id?: string } | null | undefined;
+    if (first == null) return [];
+    const isAggregated = 'hour' in first && 'count' in first;
+
+    if (isAggregated) {
+      // API returns { hour, count, supplier_id }; filter by current supplier then sum by hour
+      const supplierId = filters.supplierId ?? null;
+      const rows = supplierId
+        ? data.filter((r) => (r as { supplier_id?: string }).supplier_id === supplierId)
+        : data;
+      rows.forEach((r) => {
+        const row = r as { hour: number; count: number };
+        const h = row.hour >= 0 && row.hour <= 23 ? row.hour : 0;
+        hourBuckets[h] = (hourBuckets[h] ?? 0) + row.count;
+      });
+    } else {
+      // Legacy static: list of { timestamp, supplier_id }; bucket by local hour
+      const supplierId = filters.supplierId ?? null;
+      const rows = supplierId
+        ? data.filter((r) => (r as { supplier_id?: string }).supplier_id === supplierId)
+        : data;
+      rows.forEach((item) => {
+        const timestamp = (item as unknown as { timestamp?: string }).timestamp;
+        if (!timestamp) return;
+        const localHour = new Date(timestamp).getHours();
+        hourBuckets[localHour] += 1;
+      });
+    }
+
     return Array.from({ length: 24 }, (_, hour) => ({
       time: formatHour(hour),
       count: hourBuckets[hour],
-      hour: hour, // Keep raw hour for debugging
+      hour,
     }));
-  }, [timeData]);
+  }, [timeData, filters.supplierId]);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border-l-4 border-l-green-500 border border-gray-200 p-6">

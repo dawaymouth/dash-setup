@@ -38,6 +38,13 @@ async def get_received_to_open_time(
     When exclude_non_business_hours is True, only time within business hours
     is counted (nights and weekends are properly excluded).
     Uses median instead of average to reduce the impact of outliers.
+    Outlier filter: only rows with business minutes in (0, 6000] are included.
+    
+    To match Tableau/colleague numbers:
+    - Use ai_intake_only=true (same as is_ai_intake_enabled = true).
+    - Use the same date range (we filter by document_created_at in that range).
+    - Ensure their definition matches: business hours 8am–6pm Mon–Fri, median, cap 6000 min.
+    If their query uses a different cap or no business-hours clipping, numbers will differ.
     """
     
     # Default date range: last 30 days
@@ -172,7 +179,7 @@ async def get_processing_time(
         WHERE {where_sql}
           AND intake_updated_at > document_first_accessed_at
           AND DATEDIFF(minute, document_first_accessed_at, intake_updated_at) > 0
-          AND DATEDIFF(minute, document_first_accessed_at, intake_updated_at) < 1440  -- Exclude outliers > 1 day
+          AND DATEDIFF(minute, document_first_accessed_at, intake_updated_at) <= 144  -- Cap at 144 min (~2.4 hr), match Tableau
         GROUP BY 1, 2
         ORDER BY 1, 2
     """
@@ -197,7 +204,7 @@ async def get_processing_time(
         WHERE {where_sql}
           AND intake_updated_at > document_first_accessed_at
           AND DATEDIFF(minute, document_first_accessed_at, intake_updated_at) > 0
-          AND DATEDIFF(minute, document_first_accessed_at, intake_updated_at) < 1440
+          AND DATEDIFF(minute, document_first_accessed_at, intake_updated_at) <= 144
     """
     
     overall_results = execute_query(overall_query)

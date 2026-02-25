@@ -1,6 +1,7 @@
 """
 Volume metrics API endpoints.
 """
+import re
 from datetime import date, timedelta
 from fastapi import APIRouter, Query
 from typing import Optional
@@ -12,7 +13,7 @@ from app.models import (
     CategoryDistribution,
     CategoryDistributionResponse,
     PagesStatsResponse,
-    TimeOfDayDocument,
+    TimeOfDayBucket,
     TimeOfDayVolumeResponse,
 )
 
@@ -213,6 +214,15 @@ async def get_category_distribution(
     )
 
 
+def _validate_timezone(tz: str) -> str:
+    """Allow only IANA-style timezone names to avoid SQL injection."""
+    if not tz or len(tz) > 64:
+        return "UTC"
+    if re.match(r"^[A-Za-z0-9/_+\-]+$", tz):
+        return tz
+    return "UTC"
+
+
 @router.get("/time-of-day", response_model=TimeOfDayVolumeResponse)
 async def get_time_of_day_volume(
     start_date: Optional[date] = Query(None, description="Start date (defaults to 30 days ago)"),
@@ -220,10 +230,11 @@ async def get_time_of_day_volume(
     ai_intake_only: bool = Query(False, description="Filter to AI intake enabled suppliers only"),
     supplier_id: Optional[str] = Query(None, description="Filter by specific supplier"),
     supplier_organization_id: Optional[str] = Query(None, description="Filter by supplier organization"),
+    timezone: str = Query("UTC", description="IANA timezone for hour bucket (e.g. America/New_York)"),
 ):
     """
     Get fax volume by hour of day (0-23).
-    Aggregates across all dates in the selected range to show typical daily pattern.
+    Aggregates in the database by hour in the given timezone to avoid timeouts on large ranges.
     """
     
     # Default date range: last 30 days
@@ -231,6 +242,8 @@ async def get_time_of_day_volume(
         end_date = date.today()
     if not start_date:
         start_date = end_date - timedelta(days=30)
+    
+    tz = _validate_timezone(timezone)
     
     # Build WHERE clauses
     where_clauses = [get_date_filter_sql(start_date, end_date)]
@@ -246,22 +259,26 @@ async def get_time_of_day_volume(
     
     where_sql = " AND ".join(where_clauses)
     
+    # Aggregate by hour in the requested timezone (small result set, no full scan of rows)
     query = f"""
-        SELECT 
+        SELECT
             supplier_id,
-            document_created_at AT TIME ZONE 'UTC' as document_created_at
+            EXTRACT(HOUR FROM (document_created_at AT TIME ZONE 'UTC') AT TIME ZONE '{tz}')::int as hour,
+            COUNT(*) as count
         FROM analytics.intake_documents
         WHERE {where_sql}
+        GROUP BY supplier_id, 2
+        ORDER BY supplier_id, 2
     """
     
     results = execute_query(query)
     
     time_data = [
-        TimeOfDayDocument(timestamp=row["document_created_at"], supplier_id=row.get("supplier_id"))
+        TimeOfDayBucket(hour=int(row["hour"]), count=row["count"], supplier_id=row.get("supplier_id"))
         for row in results
     ]
     
-    total = len(time_data)
+    total = sum(row["count"] for row in results)
     
     return TimeOfDayVolumeResponse(
         data=time_data,

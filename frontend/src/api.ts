@@ -28,6 +28,9 @@ const api = axios.create({
   baseURL: '/api',
 });
 
+/** Timeout for heavy accuracy endpoints (ms) — fail fast so dashboard doesn't hang. */
+const ACCURACY_REQUEST_TIMEOUT_MS = 60_000;
+
 // Add response interceptor to catch API errors and show VPN reminder
 api.interceptors.response.use(
   (response) => response,
@@ -509,13 +512,18 @@ export const fetchTimeOfDayVolume = async (
 ): Promise<TimeOfDayVolumeResponse> => {
   if (STATIC_MODE) {
     await loadStaticData();
-    const allData = (staticData.organization?.time_of_day?.data || []) as Array<{timestamp: string, supplier_id?: string}>;
+    const allData = (staticData.organization?.time_of_day?.data || []) as Array<{ hour?: number; count?: number; timestamp?: string; supplier_id?: string }>;
     const filtered = filterBySupplier(allData, staticData.currentSupplierId);
-    return { data: filtered, total: filtered.length };
+    const hasAggregated = filtered.length > 0 && 'hour' in filtered[0] && 'count' in filtered[0];
+    const total = hasAggregated
+      ? (filtered as Array<{ count: number }>).reduce((s, r) => s + r.count, 0)
+      : filtered.length;
+    return { data: filtered as import('./types').TimeOfDayBucket[], total };
   }
-  
+
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
   const { data } = await api.get('/volume/time-of-day', {
-    params: buildParams(filters),
+    params: buildParams(filters, { timezone }),
   });
   return data;
 };
@@ -840,6 +848,7 @@ export const fetchPerFieldAccuracy = async (
   
   const { data } = await api.get('/accuracy/per-field', {
     params: buildParams(filters),
+    timeout: ACCURACY_REQUEST_TIMEOUT_MS,
   });
   // Aggregate per-supplier rows by field
   const aggregated = aggregateFieldAccuracy(data.data);
@@ -879,6 +888,7 @@ export const fetchDocumentAccuracy = async (
   
   const { data } = await api.get('/accuracy/document-level', {
     params: buildParams(filters),
+    timeout: ACCURACY_REQUEST_TIMEOUT_MS,
   });
   return data;
 };
@@ -903,6 +913,7 @@ export const fetchAccuracyTrend = async (
   
   const { data } = await api.get('/accuracy/trend', {
     params: buildParams(filters, { period }),
+    timeout: ACCURACY_REQUEST_TIMEOUT_MS,
   });
   const aggregated = aggregateAccuracyTrend(data.data);
   const totalDocs = aggregated.reduce((s: number, r: {total_docs: number}) => s + r.total_docs, 0);
@@ -954,7 +965,10 @@ export const fetchFieldAccuracyTrend = async (
     params.supplier_organization_id = filterSubset.supplierOrganizationId;
   }
   
-  const { data } = await api.get('/accuracy/field-level-trend', { params });
+  const { data } = await api.get('/accuracy/field-level-trend', {
+    params,
+    timeout: ACCURACY_REQUEST_TIMEOUT_MS,
+  });
   const aggregated = aggregateAccuracyTrend(data.data);
   const totalDocs = aggregated.reduce((s: number, r: {total_docs: number}) => s + r.total_docs, 0);
   const totalChanges = aggregated.reduce((s: number, r: {docs_with_changes: number}) => s + r.docs_with_changes, 0);

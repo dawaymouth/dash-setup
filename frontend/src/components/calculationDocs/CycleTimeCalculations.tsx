@@ -14,7 +14,8 @@ export const CycleTimeCalculations: React.FC = () => (
         <li><span className="font-medium">Received outside hours:</span> Start time clipped to the next business-hour boundary</li>
         <li><span className="font-medium">Opened outside hours:</span> End time clipped to the most recent business-hour boundary</li>
         <li><span className="font-medium">Calculation:</span> Uses median instead of average to reduce outlier impact</li>
-        <li><span className="font-medium">Outlier filter:</span> Excludes times greater than ~2 business weeks (6,000 minutes)</li>
+        <li><span className="font-medium">Outlier filter:</span> Only includes business minutes &gt; 0 and ≤ 6,000 (~2 business weeks)</li>
+        <li><span className="font-medium">To match Tableau/colleague:</span> Use the same date range, leave &quot;AI intake only&quot; checked, and ensure their definition uses the same business hours and cap.</li>
       </ul>
     </div>
 
@@ -26,7 +27,7 @@ export const CycleTimeCalculations: React.FC = () => (
       <ul className="list-disc list-inside text-gray-600 space-y-1 ml-2">
         <li><span className="font-medium">States included:</span> All except "new" (pushed, assigned, emailed, etc.)</li>
         <li><span className="font-medium">Calculation:</span> Uses median instead of average to reduce outlier impact</li>
-        <li><span className="font-medium">Outlier filter:</span> Excludes times greater than 1,440 minutes (24 hours)</li>
+        <li><span className="font-medium">Outlier filter:</span> Only includes times &gt; 0 and ≤ 144 minutes (~2.4 hours), matching Tableau</li>
         <li><span className="font-medium">Validity check:</span> Only includes positive processing times</li>
       </ul>
     </div>

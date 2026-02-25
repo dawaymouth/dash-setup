@@ -1,20 +1,35 @@
 # Performance Optimization Recommendations
 
-## Database Indexes for Accuracy Queries
+## Root Cause Fix (Query-Side, Implemented)
+
+The accuracy endpoints were slow because the planner scanned `workflow.csr_inbox_state_data_audits` by `created_at` range (millions of rows) then joined to a small document set. The primary query-side fixes applied:
+
+1. **Drive audit scan from documents_in_scope:** All audit CTEs now filter with `a.csr_inbox_state_id IN (SELECT csr_inbox_state_id FROM documents_in_scope)` so Redshift can restrict the audit scan to in-scope state_ids (especially effective if the table has a SORT KEY on `csr_inbox_state_id`).
+2. **Single-scan pattern:** The shared CTEs use one `all_vals`-style CTE that computes both first system value and last value per (state_id, field_identifier) in a single pass, instead of two separate `first_values` and `last_values` scans.
+3. **Tighter scope:** When `ai_intake_only=true`, `documents_in_scope` also filters by `id.is_ai_intake_enabled = true`, aligning with export bulk and reducing the document set.
+4. **Date caps:** Document-level is capped at 30 days; trend/field-level-trend are capped at 30 days when no organization is selected.
+
+Schema changes below (SORT KEY, materialized views) remain optional follow-ups for the DBA.
+
+---
+
+## Redshift Table Design (SORT KEY) for Accuracy Queries
+
+**Note:** Redshift does not support `CREATE INDEX` like PostgreSQL. Use **SORT KEY** (and optionally DISTKEY) when creating or altering the table so that filtering by `csr_inbox_state_id` and `created_at` is efficient.
 
 ### Problem Statement
 
-The accuracy trend queries are experiencing slow performance due to full table scans on the `workflow.csr_inbox_state_data_audits` table with expensive window functions. These queries scan millions of rows to calculate first and last values for each document+field combination.
+The accuracy trend queries can still benefit from table design: full table scans on `workflow.csr_inbox_state_data_audits` with window functions are expensive. A SORT KEY allows Redshift to skip blocks when filtering by `csr_inbox_state_id IN (...)` and `created_at` range.
 
-### Recommended Indexes
+### Recommended SORT KEYs
 
-#### 1. Primary Composite Index for Date Range Queries
-```sql
-CREATE INDEX idx_audit_created_doc_field 
-ON workflow.csr_inbox_state_data_audits (created_at, csr_inbox_state_id, field_identifier);
-```
+#### 1. Primary SORT KEY for In-Scope + Date
+If the table can be altered, use a composite SORT KEY so that filtering by `csr_inbox_state_id` and `created_at` is efficient:
 
-**Purpose:** Optimizes date range filtering and partitioning for window functions.
+- **SORT KEY (csr_inbox_state_id, created_at)** — best when the query restricts by `csr_inbox_state_id IN (SELECT ... FROM documents_in_scope)` and then by `created_at` range. Redshift can then use the sort order to read only relevant blocks.
+
+#### 2. Alternative: Date-First SORT KEY
+- **SORT KEY (created_at, csr_inbox_state_id, field_identifier)** — helps date-range-first plans and partitioning for window functions.
 
 **Queries affected:**
 - `/accuracy/per-field`
@@ -22,46 +37,22 @@ ON workflow.csr_inbox_state_data_audits (created_at, csr_inbox_state_id, field_i
 - `/accuracy/field-level-trend`
 - `/accuracy/trend`
 
-**Expected impact:** 5-10x improvement for date-filtered queries
+**Expected impact:** 5-10x improvement when combined with the IN filter and single-scan pattern above.
 
 ---
 
-#### 2. System Value Filter Index
-```sql
-CREATE INDEX idx_audit_user_created 
-ON workflow.csr_inbox_state_data_audits (user_id, created_at) 
-WHERE user_id IS NULL;
-```
-
-**Purpose:** Partial index to quickly filter system-preselected values (where `user_id IS NULL`).
-
-**Queries affected:** All accuracy endpoints that filter by `user_id IS NULL`
-
-**Expected impact:** 3-5x improvement when combined with date filters
-
----
-
-#### 3. Window Function Optimization Index
-```sql
-CREATE INDEX idx_audit_doc_field_created 
-ON workflow.csr_inbox_state_data_audits (csr_inbox_state_id, field_identifier, created_at);
-```
-
-**Purpose:** Optimizes `PARTITION BY csr_inbox_state_id, field_identifier ORDER BY created_at` window functions used to find first and last values.
-
-**Queries affected:**
-- `/accuracy/field-level-trend` (most critical)
-- `/accuracy/per-field`
+#### 3. Window Function Optimization (Table Design)
+- **SORT KEY (csr_inbox_state_id, field_identifier, created_at)** — optimizes `PARTITION BY csr_inbox_state_id, field_identifier ORDER BY created_at` window functions.
 
 **Expected impact:** 40-60% improvement for window function queries
 
 ---
 
-### Index Priority
+### SORT KEY Priority
 
-1. **High Priority:** `idx_audit_doc_field_created` - Will have immediate impact on slow trend query
-2. **Medium Priority:** `idx_audit_created_doc_field` - General purpose improvement
-3. **Low Priority:** `idx_audit_user_created` - Useful but less critical with other indexes
+1. **High Priority:** SORT KEY (csr_inbox_state_id, created_at) — supports the IN filter and reduces rows read
+2. **Medium Priority:** SORT KEY (csr_inbox_state_id, field_identifier, created_at) — window function optimization
+3. **Low Priority:** (created_at, csr_inbox_state_id) — date-first plans
 
 ### Additional Optimization Options
 
@@ -92,7 +83,7 @@ GROUP BY 1, 2, 3;
 
 #### Query Statistics Collection
 
-To validate index effectiveness, collect query statistics before and after:
+To validate SORT KEY and query effectiveness, collect query statistics before and after:
 
 ```sql
 -- Before optimization
@@ -110,10 +101,8 @@ LIMIT 10;
 
 ## Implementation Notes
 
-1. **Index Creation Timing:** Create indexes during low-traffic periods as they may lock the table
-2. **Storage Impact:** Each index will consume additional storage (estimate 5-15% of table size per index)
-3. **Write Performance:** Indexes will slightly slow down INSERT/UPDATE operations on the audits table
-4. **Monitoring:** Monitor query performance after index creation to validate improvements
+1. **Redshift:** Use SORT KEY on table create/alter, not CREATE INDEX. Coordinate with DBA for existing tables.
+2. **Storage/Write:** SORT KEY is the table’s physical order; no separate index storage. Monitor query performance after changes.
 
 ---
 

@@ -2,25 +2,6 @@
 
 Welcome! This guide will help you get the AI Intake Dashboard running on your Mac in about 5 minutes.
 
-## Quick Start
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/dawaymouth/dash-setup.git new-dash
-cd new-dash
-
-# 2. Run setup (one time only)
-./setup.sh
-
-# 3. Connect to VPN and start!
-./start.sh
-```
-
-That's it! The dashboard will open automatically in your browser.
-
-**Using the Dashboard Hub instead?** You can also get this dashboard via the [Dashboard Hub](https://github.com/dawaymouth/dashboard-hub): clone the hub, run `./sync.sh`, then run `./setup.sh` from `dashboards/ai-intake` before launching with `./start.sh`.
-
----
 
 ## Prerequisites
 

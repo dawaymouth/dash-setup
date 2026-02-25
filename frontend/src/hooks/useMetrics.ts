@@ -168,6 +168,8 @@ export const usePerFieldAccuracy = (filters: FilterState) => {
   return useQuery({
     queryKey: ['perFieldAccuracy', filters],
     queryFn: () => fetchPerFieldAccuracy(filters),
+    // Only run the heavy per-field query when an org is selected (keeps dashboard load fast)
+    enabled: !!filters.supplierOrganizationId,
   });
 };
 

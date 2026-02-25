@@ -199,11 +199,23 @@ def query_pages_by_supplier(org_id: str, start_date: date, end_date: date) -> li
 # ---------------------------------------------------------------------------
 
 def _build_base_ctes_bulk(start_date: date, end_date: date, org_ids: list[str]) -> str:
-    """Base CTEs for accuracy with multiple orgs; comparisons include supplier_organization_id."""
+    """Base CTEs for accuracy with multiple orgs; comparisons include supplier_organization_id.
+    Uses documents_in_scope + IN filter so planner restricts audit scan to in-scope state_ids."""
     if not org_ids:
         return "comparisons AS (SELECT 1 AS _dummy WHERE 1=0)"
     org_list = ",".join(f"'{oid}'" for oid in org_ids)
+    end_exclusive = end_date + timedelta(days=1)
     return f"""
+        documents_in_scope AS (
+            SELECT s.id AS csr_inbox_state_id
+            FROM analytics.intake_documents id
+            JOIN workflow.csr_inbox_states s ON s.external_id = id.intake_document_id
+            JOIN workflow.suppliers sup ON s.supplier_id = sup.id
+            JOIN workflow.supplier_organizations so ON sup.supplier_organization_id = so.id
+            WHERE id.document_created_at >= '{start_date}' AND id.document_created_at < '{end_exclusive}'
+              AND so.external_id IN ({org_list})
+              AND id.is_ai_intake_enabled = true
+        ),
         first_values AS (
             SELECT a.csr_inbox_state_id, a.record_type, a.field_identifier, a.field_value, a.created_at,
                    id.supplier_id, id.supplier_organization_id,
@@ -213,8 +225,9 @@ def _build_base_ctes_bulk(start_date: date, end_date: date, org_ids: list[str]) 
             JOIN analytics.intake_documents id ON s.external_id = id.intake_document_id
             JOIN workflow.suppliers sup ON s.supplier_id = sup.id
             JOIN workflow.supplier_organizations so ON sup.supplier_organization_id = so.id
-            WHERE a.user_id IS NULL
-              AND a.created_at >= '{start_date}' AND a.created_at < '{end_date + timedelta(days=1)}'
+            WHERE a.csr_inbox_state_id IN (SELECT csr_inbox_state_id FROM documents_in_scope)
+              AND a.user_id IS NULL
+              AND a.created_at >= '{start_date}' AND a.created_at < '{end_exclusive}'
               AND so.external_id IN ({org_list})
               AND id.is_ai_intake_enabled = true
         ),
@@ -226,7 +239,8 @@ def _build_base_ctes_bulk(start_date: date, end_date: date, org_ids: list[str]) 
             JOIN analytics.intake_documents id ON s.external_id = id.intake_document_id
             JOIN workflow.suppliers sup ON s.supplier_id = sup.id
             JOIN workflow.supplier_organizations so ON sup.supplier_organization_id = so.id
-            WHERE a.created_at >= '{start_date}' AND a.created_at < '{end_date + timedelta(days=1)}'
+            WHERE a.csr_inbox_state_id IN (SELECT csr_inbox_state_id FROM documents_in_scope)
+              AND a.created_at >= '{start_date}' AND a.created_at < '{end_exclusive}'
               AND so.external_id IN ({org_list})
               AND id.is_ai_intake_enabled = true
         ),
@@ -324,11 +338,13 @@ def query_document_accuracy_by_supplier(org_id: str, start_date: date, end_date:
 # ---------------------------------------------------------------------------
 
 def query_cycle_received_to_open(org_id: str, start_date: date, end_date: date) -> tuple[list[dict], float]:
-    """Per-day per-supplier median minutes; overall median. Uses business hours (8 AM–6 PM Mon–Fri), matching API and UI."""
+    """Per-day per-supplier median minutes; overall median. Uses business hours (8 AM–6 PM Mon–Fri), matching API and UI.
+    Restricts to is_ai_intake_enabled = true so numbers match Tableau/colleague definition."""
     where_sql = (
         f"document_created_at >= '{start_date}' AND document_created_at < '{end_date + timedelta(days=1)}'"
         f" AND document_first_accessed_at IS NOT NULL"
         f" AND supplier_organization_id = '{org_id}'"
+        f" AND is_ai_intake_enabled = true"
     )
     query = build_received_to_open_business_hours_query(where_sql)
     results = execute_query(query)
@@ -360,7 +376,7 @@ def query_cycle_processing(org_id: str, start_date: date, end_date: date) -> tup
         FROM analytics.intake_documents
         WHERE {where_sql}
           AND intake_updated_at > document_first_accessed_at
-          AND {time_calc} > 0 AND {time_calc} < 1440
+          AND {time_calc} > 0 AND {time_calc} <= 144
         GROUP BY 1, 2
         ORDER BY 1, 2
     """
@@ -372,7 +388,7 @@ def query_cycle_processing(org_id: str, start_date: date, end_date: date) -> tup
     overall_q = f"""
         SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {time_calc}) AS median_minutes
         FROM analytics.intake_documents
-        WHERE {where_sql} AND intake_updated_at > document_first_accessed_at AND {time_calc} > 0 AND {time_calc} < 1440
+        WHERE {where_sql} AND intake_updated_at > document_first_accessed_at AND {time_calc} > 0 AND {time_calc} <= 144
     """
     overall_rows = execute_query(overall_q)
     overall_median = round(float(overall_rows[0]["median_minutes"]), 2) if overall_rows and overall_rows[0].get("median_minutes") is not None else 0
@@ -436,7 +452,7 @@ def query_cycle_processing_bulk(start_date: date, end_date: date, org_ids: list[
         SELECT supplier_organization_id, DATE_TRUNC('day', document_created_at)::date AS date, supplier_id,
                PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {time_calc}) AS avg_minutes, COUNT(*) AS count
         FROM analytics.intake_documents
-        WHERE {where_sql} AND intake_updated_at > document_first_accessed_at AND {time_calc} > 0 AND {time_calc} < 1440
+        WHERE {where_sql} AND intake_updated_at > document_first_accessed_at AND {time_calc} > 0 AND {time_calc} <= 144
         GROUP BY 1, 2, 3 ORDER BY 1, 2, 3
     """
     rows = execute_query(query)
@@ -445,7 +461,7 @@ def query_cycle_processing_bulk(start_date: date, end_date: date, org_ids: list[
     overall_q = f"""
         SELECT supplier_organization_id, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY {time_calc}) AS median_minutes
         FROM analytics.intake_documents
-        WHERE {where_sql} AND intake_updated_at > document_first_accessed_at AND {time_calc} > 0 AND {time_calc} < 1440
+        WHERE {where_sql} AND intake_updated_at > document_first_accessed_at AND {time_calc} > 0 AND {time_calc} <= 144
         GROUP BY supplier_organization_id
     """
     overall_rows = execute_query(overall_q)

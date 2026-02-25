@@ -52,14 +52,21 @@ class PagesStatsResponse(BaseModel):
 
 
 class TimeOfDayDocument(BaseModel):
-    """Document timestamp for time-of-day analysis."""
+    """Document timestamp for time-of-day analysis (legacy)."""
     timestamp: datetime
     supplier_id: Optional[str] = None  # For client-side filtering by supplier
 
 
+class TimeOfDayBucket(BaseModel):
+    """Aggregated count for one hour (0-23) in a timezone."""
+    hour: int
+    count: int
+    supplier_id: Optional[str] = None  # For client-side filtering by supplier
+
+
 class TimeOfDayVolumeResponse(BaseModel):
-    """Response for time-of-day volume endpoint."""
-    data: list[TimeOfDayDocument]
+    """Response for time-of-day volume endpoint (aggregated by hour)."""
+    data: list[TimeOfDayBucket]
     total: int
 
 
